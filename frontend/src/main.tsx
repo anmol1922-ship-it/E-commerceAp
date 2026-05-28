@@ -1,10 +1,19 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { Provider } from "react-redux";
+import { BrowserRouter } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import { store } from "./store";
+import App from "./App";
+import "./index.css";
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <Provider store={store}>
+      <BrowserRouter>
+        <Toaster position="top-right" />
+        <App />
+      </BrowserRouter>
+    </Provider>
   </StrictMode>,
-)
+);

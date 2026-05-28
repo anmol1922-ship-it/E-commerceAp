@@ -1,284 +1,187 @@
-# E-Commerce Application
+# Bisleri Water Delivery - Vasai, Maharashtra
 
-A full-stack e-commerce application built with React (Frontend) and Node.js Express (Backend).
+A production-ready full-stack e-commerce application for ordering Bisleri mineral water in Vasai.
 
-## Project Overview
+## Tech Stack
 
-This project includes:
+| Layer      | Technology                                             |
+| ---------- | ------------------------------------------------------ |
+| Frontend   | React 19, React Router, Redux Toolkit, Tailwind CSS v4 |
+| Backend    | Node.js, Express.js, TypeScript                        |
+| Database   | MongoDB with Mongoose                                  |
+| Auth       | JWT + bcrypt                                           |
+| Payment    | Razorpay                                               |
+| Deployment | Docker, Docker Compose                                 |
 
-- **Frontend**: Modern React application with Vite, TypeScript, and responsive UI
-- **Backend**: RESTful API built with Express, MongoDB, and JWT authentication
-- **Database**: MongoDB for storing products, users, and orders
-- **Authentication**: JWT-based user authentication and authorization
+## Quick Start
 
-## Project Structure
+### Prerequisites
 
-```
-E-commerceAp/
-├── frontend/                 # React + Vite application
-│   ├── src/
-│   │   ├── App.tsx          # Main application component
-│   │   ├── App.css          # Application styles
-│   │   ├── main.tsx         # React entry point
-│   │   └── index.css        # Global styles
-│   ├── package.json         # Frontend dependencies
-│   ├── tsconfig.json        # TypeScript configuration
-│   ├── vite.config.ts       # Vite configuration
-│   └── .env                 # Environment variables
-│
-├── backend/                  # Node.js Express API
-│   ├── src/
-│   │   ├── index.ts         # Server entry point
-│   │   ├── models/          # Database models
-│   │   │   ├── Product.ts   # Product model
-│   │   │   ├── User.ts      # User model
-│   │   │   └── Order.ts     # Order model
-│   │   ├── routes/          # API routes
-│   │   │   ├── products.ts  # Product endpoints
-│   │   │   ├── auth.ts      # Authentication endpoints
-│   │   │   └── orders.ts    # Order endpoints
-│   │   └── middleware/      # Custom middleware
-│   │       └── auth.ts      # Auth middleware
-│   ├── package.json         # Backend dependencies
-│   ├── tsconfig.json        # TypeScript configuration
-│   └── .env                 # Environment variables
-│
-└── .github/
-    └── copilot-instructions.md  # Project documentation
+- Node.js 20+
+- MongoDB (local or Atlas)
+- Razorpay account (for payment testing)
+
+### 1. Clone & Install
+
+```bash
+# Backend
+cd backend
+cp .env.example .env   # edit with your MongoDB URI & Razorpay keys
+npm install
+
+# Frontend
+cd ../frontend
+cp .env.example .env
+npm install
 ```
 
-## Prerequisites
-
-- Node.js (v14 or higher)
-- npm (v6 or higher)
-- MongoDB (local or cloud instance)
-
-## Setup Instructions
-
-### 1. Backend Setup
+### 2. Seed Database
 
 ```bash
 cd backend
-npm install
+npm run seed
 ```
 
-Create or update `.env` file:
+This creates 8 Bisleri products and an admin user:
 
-```
-PORT=3000
-MONGODB_URI=mongodb://localhost:27017/ecommerce
-JWT_SECRET=your_jwt_secret_key_here
-NODE_ENV=development
-```
+- **Admin:** admin@bisleri-vasai.com / admin123
 
-### 2. Frontend Setup
+### 3. Run Development
 
 ```bash
-cd frontend
-npm install
-```
-
-Update `.env` file:
-
-```
-VITE_API_URL=http://localhost:3000/api
-```
-
-## Running the Application
-
-### Start Backend Server
-
-```bash
+# Terminal 1 - Backend
 cd backend
 npm run dev
-```
 
-The API server will run on `http://localhost:3000`
-
-### Start Frontend Development Server
-
-```bash
+# Terminal 2 - Frontend
 cd frontend
 npm run dev
 ```
 
-The React application will run on `http://localhost:5173`
+Open http://localhost:5173
 
-## Available Scripts
+### 4. Docker (Production)
 
-### Backend
+```bash
+docker-compose up --build
+```
 
-- `npm run dev` - Start development server with ts-node
-- `npm run build` - Compile TypeScript to JavaScript
-- `npm start` - Run compiled application
-- `npm run lint` - Run ESLint
-- `npm test` - Run tests with Jest
+App available at http://localhost:5000
 
-### Frontend
+## Products
 
-- `npm run dev` - Start Vite development server
-- `npm run build` - Build for production
-- `npm run lint` - Run ESLint
-- `npm run preview` - Preview production build
+| Product                 | Price |
+| ----------------------- | ----- |
+| 20L Water Jar           | ₹100  |
+| 10L Water Jar           | ₹125  |
+| 5L Water Jar            | ₹75   |
+| 2L Case (9 bottles)     | ₹180  |
+| 1L Case (12 bottles)    | ₹240  |
+| 500ml Case (24 bottles) | ₹240  |
+| 250ml Case (48 bottles) | ₹290  |
+| 200ml Case (48 bottles) | ₹260  |
 
 ## API Endpoints
 
+### Auth
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/profile`
+- `PUT /api/auth/profile`
+- `POST /api/auth/address`
+
 ### Products
 
-- `GET /api/products` - Get all products
-- `GET /api/products/:id` - Get product by ID
-- `POST /api/products` - Create new product
-- `PUT /api/products/:id` - Update product
-- `DELETE /api/products/:id` - Delete product
+- `GET /api/products` — filter by category, price, search, sort
+- `GET /api/products/slug/:slug`
+- `GET /api/products/:id`
+- `POST /api/products` (admin)
+- `PUT /api/products/:id` (admin)
+- `DELETE /api/products/:id` (admin)
 
-### Authentication
+### Cart
 
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
+- `GET /api/cart`
+- `POST /api/cart/add`
+- `PUT /api/cart/update`
+- `DELETE /api/cart/item/:productId`
+- `DELETE /api/cart/clear`
 
 ### Orders
 
-- `GET /api/orders` - Get user's orders (requires auth)
-- `GET /api/orders/:id` - Get order by ID (requires auth)
-- `POST /api/orders` - Create new order (requires auth)
+- `POST /api/orders`
+- `POST /api/orders/verify-payment`
+- `GET /api/orders/my-orders`
+- `GET /api/orders/my-orders/:id`
+- `GET /api/orders/admin/all` (admin)
+- `PUT /api/orders/admin/:id/status` (admin)
+- `GET /api/orders/admin/dashboard` (admin)
 
 ## Features
 
-### Frontend
-
-- Product listing with search and filtering
-- Shopping cart functionality
-- User authentication
-- Responsive design
-- Real-time cart updates
-
-### Backend
-
-- RESTful API with proper error handling
-- User authentication with JWT
-- Product management
-- Order management
-- Input validation
-- CORS support
-
-## Technology Stack
-
-### Frontend
-
-- React 19
-- TypeScript
-- Vite
-- CSS3 (Custom styling)
-- Fetch API
-
-### Backend
-
-- Node.js
-- Express.js
-- TypeScript
-- MongoDB
-- Mongoose
-- JWT
-- bcryptjs
-- CORS
+- Landing page with hero, products, testimonials
+- Product catalog with filtering, sorting, search
+- Persistent cart with GST & delivery calculation
+- Vasai pincode validation
+- Delivery slot selection
+- Razorpay payment integration
+- Cash on Delivery option
+- JWT authentication (register/login)
+- User profile & order history
+- Admin dashboard (stats, products, orders management)
+- Mobile-responsive design
+- Toast notifications
+- Skeleton loading states
+- Rate limiting, Helmet, CORS, Compression
+- Docker deployment ready
 
 ## Environment Variables
 
 ### Backend (.env)
 
 ```
-PORT=3000
-MONGODB_URI=mongodb://localhost:27017/ecommerce
-JWT_SECRET=your_jwt_secret_key_here
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/bisleri
+JWT_SECRET=your_secret_here
+JWT_EXPIRE=7d
+RAZORPAY_KEY_ID=rzp_test_xxxxx
+RAZORPAY_KEY_SECRET=xxxxx
 NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
 ```
 
 ### Frontend (.env)
 
 ```
-VITE_API_URL=http://localhost:3000/api
+VITE_API_URL=/api
 ```
 
-## Database Models
+## Folder Structure
 
-### Product
-
-- `name` (String, required)
-- `description` (String, required)
-- `price` (Number, required)
-- `stock` (Number, default: 0)
-- `category` (String, required)
-- `imageUrl` (String)
-- `createdAt` (Date, auto)
-- `updatedAt` (Date, auto)
-
-### User
-
-- `email` (String, unique, required)
-- `password` (String, hashed, required)
-- `firstName` (String, required)
-- `lastName` (String, required)
-- `phone` (String)
-- `address` (String)
-- `createdAt` (Date, auto)
-- `updatedAt` (Date, auto)
-
-### Order
-
-- `userId` (ObjectId, required)
-- `items` (Array of products with quantity and price)
-- `totalAmount` (Number, required)
-- `status` (String: pending, completed, cancelled)
-- `shippingAddress` (String, required)
-- `createdAt` (Date, auto)
-- `updatedAt` (Date, auto)
-
-## Development Workflow
-
-1. Start MongoDB locally or use a cloud instance
-2. Start the backend server with `npm run dev`
-3. In another terminal, start the frontend with `npm run dev`
-4. Open `http://localhost:5173` in your browser
-5. Use the API endpoints as documented above
-
-## Future Enhancements
-
-- Payment gateway integration (Stripe, PayPal)
-- Email notifications
-- Product reviews and ratings
-- Wishlist functionality
-- Admin dashboard
-- Inventory management
-- Advanced search and filtering
-- User profile management
-- Order tracking
-
-## Troubleshooting
-
-### MongoDB Connection Error
-
-- Ensure MongoDB is running locally or provide a valid cloud connection string
-- Check `MONGODB_URI` in the `.env` file
-
-### CORS Errors
-
-- Ensure backend is running on port 3000
-- Check `VITE_API_URL` in frontend `.env` file
-
-### Port Already in Use
-
-- Change `PORT` in backend `.env` file
-- Use `sudo lsof -i :3000` (macOS/Linux) or `netstat -ano | findstr :3000` (Windows) to find the process
+```
+├── backend/
+│   └── src/
+│       ├── config/        # DB connection, environment config
+│       ├── controllers/   # Route handlers
+│       ├── middleware/     # Auth, validation, error handling
+│       ├── models/        # Mongoose schemas
+│       ├── routes/        # Express routes
+│       ├── scripts/       # Seed scripts
+│       ├── utils/         # Logger
+│       └── index.ts       # App entry point
+├── frontend/
+│   └── src/
+│       ├── api/           # Axios config
+│       ├── components/    # Reusable components
+│       ├── pages/         # Page components
+│       │   └── admin/     # Admin panel pages
+│       └── store/         # Redux store & slices
+├── Dockerfile
+├── docker-compose.yml
+└── README.md
+```
 
 ## License
 
-MIT
-
-## Support
-
-For issues or questions, please open an issue in the repository.
-
----
-
-**Last Updated**: May 2, 2026
-**Version**: 1.0.0
+Private — Bisleri Water Delivery, Vasai

@@ -1,47 +1,71 @@
-import express, { Express, Request, Response } from "express";
+import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
-import mongoose from "mongoose";
-import productRoutes from "./routes/products";
-import authRoutes from "./routes/auth";
-import orderRoutes from "./routes/orders";
+import path from "path";
 
-// Load environment variables
 dotenv.config();
 
-const app: Express = express();
-const PORT = process.env.PORT || 3000;
-const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/ecommerce";
+import connectDB from "./config/db";
+import { config } from "./config";
+import { errorHandler } from "./middleware/errorHandler";
+import { logger } from "./utils/logger";
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+import authRoutes from "./routes/auth";
+import productRoutes from "./routes/products";
+import cartRoutes from "./routes/cart";
+import orderRoutes from "./routes/orders";
+
+const app = express();
+
+// Security
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+app.use(cors({ origin: config.frontendUrl, credentials: true }));
+
+// Rate limiting
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
+app.use("/api/", limiter);
+
+// Body parsing
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// Connect to MongoDB
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+// Compression & logging
+app.use(compression());
+if (config.nodeEnv !== "production") {
+  app.use(morgan("dev"));
+}
 
-// Routes
-app.get("/", (req: Request, res: Response) => {
-  res.json({ message: "E-commerce API Server" });
-});
+// Static files
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
-app.get("/api/health", (req: Request, res: Response) => {
+// API Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/orders", orderRoutes);
+
+// Health check
+app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// API Routes
-app.use("/api/products", productRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/orders", orderRoutes);
+// Error handler
+app.use(errorHandler);
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+// Start server
+const startServer = async () => {
+  await connectDB();
+  app.listen(config.port, () => {
+    logger.info(
+      `🚀 Bisleri API running on port ${config.port} [${config.nodeEnv}]`,
+    );
+  });
+};
+
+startServer();
 
 export default app;

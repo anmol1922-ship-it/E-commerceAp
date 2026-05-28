@@ -1,53 +1,26 @@
-import { Router, Response } from "express";
-import Order from "../models/Order";
-import { authMiddleware, AuthRequest } from "../middleware/auth";
+import { Router } from "express";
+import {
+  createOrder,
+  verifyPayment,
+  getMyOrders,
+  getOrderById,
+  getAllOrders,
+  updateOrderStatus,
+  getDashboardStats,
+} from "../controllers/orderController";
+import { authenticate, isAdmin } from "../middleware/auth";
+import { orderValidator } from "../middleware/validators";
 
 const router = Router();
 
-// Get user orders
-router.get("/", authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const orders = await Order.find({ userId: req.userId }).populate(
-      "items.productId",
-    );
-    res.json(orders);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching orders" });
-  }
-});
+router.post("/", authenticate, orderValidator, createOrder);
+router.post("/verify-payment", authenticate, verifyPayment);
+router.get("/my-orders", authenticate, getMyOrders);
+router.get("/my-orders/:id", authenticate, getOrderById);
 
-// Create order
-router.post("/", authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const { items, totalAmount, shippingAddress } = req.body;
-
-    const newOrder = new Order({
-      userId: req.userId,
-      items,
-      totalAmount,
-      shippingAddress,
-    });
-
-    await newOrder.save();
-    res.status(201).json(newOrder);
-  } catch (error) {
-    res.status(500).json({ message: "Error creating order" });
-  }
-});
-
-// Get order by ID
-router.get("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const order = await Order.findById(req.params.id).populate(
-      "items.productId",
-    );
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-    res.json(order);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching order" });
-  }
-});
+// Admin routes
+router.get("/admin/all", authenticate, isAdmin, getAllOrders);
+router.put("/admin/:id/status", authenticate, isAdmin, updateOrderStatus);
+router.get("/admin/dashboard", authenticate, isAdmin, getDashboardStats);
 
 export default router;
