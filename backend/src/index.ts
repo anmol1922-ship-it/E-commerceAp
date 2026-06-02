@@ -18,6 +18,7 @@ import authRoutes from "./routes/auth";
 import productRoutes from "./routes/products";
 import cartRoutes from "./routes/cart";
 import orderRoutes from "./routes/orders";
+import adminRoutes from "./routes/admin";
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {
@@ -59,6 +61,21 @@ app.use(errorHandler);
 // Start server
 const startServer = async () => {
   await connectDB();
+
+  // Log configuration for debugging
+  console.log("🔧 Configuration loaded:");
+  console.log("  PORT:", config.port);
+  console.log("  NODE_ENV:", config.nodeEnv);
+  console.log(
+    "  RAZORPAY_KEY_ID:",
+    config.razorpayKeyId ? "✅ SET" : "❌ MISSING",
+  );
+  console.log(
+    "  RAZORPAY_KEY_SECRET:",
+    config.razorpayKeySecret ? "✅ SET" : "❌ MISSING",
+  );
+  console.log("  DATABASE_URL:", config.mongoUri ? "✅ SET" : "❌ MISSING");
+
   app.listen(config.port, () => {
     logger.info(
       `🚀 Bisleri API running on port ${config.port} [${config.nodeEnv}]`,

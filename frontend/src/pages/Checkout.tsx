@@ -48,6 +48,18 @@ export default function Checkout() {
     (sum, i) => sum + i.product.price * i.quantity,
     0,
   );
+
+  const loadRazorpayScript = async () => {
+    if ((window as any).Razorpay) return true;
+
+    return new Promise<boolean>((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
   const gst = Math.round(subtotal * GST_RATE * 100) / 100;
   const delivery = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_CHARGE;
   const total = Math.round((subtotal + gst + delivery) * 100) / 100;
@@ -74,7 +86,7 @@ export default function Checkout() {
     try {
       const orderData = {
         items: items.map((i) => ({
-          product: i.product._id,
+          product: i.product.id,
           quantity: i.quantity,
         })),
         shippingAddress: { ...address, city: "Vasai" },
@@ -83,8 +95,27 @@ export default function Checkout() {
       };
 
       const { data } = await api.post("/orders", orderData);
+      console.log("order response:", data);
+      console.log("razorpayKeyId:", data.razorpayKeyId);
+      console.log("razorpayOrder:", data.razorpayOrder);
 
       if (paymentMethod === "razorpay" && data.razorpayOrder) {
+        if (!data.razorpayKeyId) {
+          toast.error(
+            "Payment configuration error: Missing Razorpay Key. Please contact support.",
+          );
+          console.error("Missing razorpayKeyId in response:", data);
+          return;
+        }
+
+        const razorpayLoaded = await loadRazorpayScript();
+        if (!razorpayLoaded || !(window as any).Razorpay) {
+          toast.error(
+            "Unable to load Razorpay checkout. Please refresh and try again.",
+          );
+          return;
+        }
+
         // Open Razorpay checkout
         const options = {
           key: data.razorpayKeyId,
@@ -102,6 +133,7 @@ export default function Checkout() {
           prefill: { name: user.name, email: user.email },
           theme: { color: "#059669" },
         };
+        console.log("Razorpay options:", options);
         const rzp = new (window as any).Razorpay(options);
         rzp.open();
       } else {
@@ -111,6 +143,8 @@ export default function Checkout() {
         setOrderSuccess(true);
       }
     } catch (err: any) {
+      console.error("Order creation error:", err);
+      console.error("Error response:", err.response?.data);
       toast.error(err.response?.data?.message || "Order failed");
     } finally {
       setLoading(false);
@@ -226,7 +260,7 @@ export default function Checkout() {
           <h2 className="font-semibold text-gray-900 mb-4">Order Summary</h2>
           <div className="space-y-2 text-sm max-h-48 overflow-y-auto">
             {items.map((item) => (
-              <div key={item.product._id} className="flex justify-between">
+              <div key={item.product.id} className="flex justify-between">
                 <span className="text-gray-600">
                   {item.product.name} × {item.quantity}
                 </span>

@@ -52,7 +52,7 @@ export default function Home() {
           </div>
           <div className="hidden md:flex justify-center">
             <img
-              src="/images/bisleri/bisleri-20l.svg"
+              src="/images/bisleri/bisleri-20l.png"
               alt="Bisleri 20L Jar"
               className="w-64 drop-shadow-2xl"
             />
@@ -73,22 +73,22 @@ export default function Home() {
             {
               name: "20L Jar",
               price: "₹100",
-              img: "/images/bisleri/bisleri-20l.svg",
+              img: "/images/bisleri/bisleri-20l.png",
             },
             {
               name: "1L Case (12)",
               price: "₹240",
-              img: "/images/bisleri/bisleri-1l.svg",
+              img: "/images/bisleri/bisleri-1ltr-box.jpg",
             },
             {
               name: "500ml Case (24)",
               price: "₹240",
-              img: "/images/bisleri/bisleri-500ml-box.svg",
+              img: "/images/bisleri/bisleri-500ml-box.png",
             },
             {
               name: "2L Case (9)",
               price: "₹180",
-              img: "/images/bisleri/bisleri-2l.svg",
+              img: "/images/bisleri/bisleri-2L.png",
             },
           ].map((p) => (
             <Link

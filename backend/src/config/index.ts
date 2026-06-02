@@ -1,6 +1,13 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+console.log("📋 Environment Variables on Load:");
+console.log("  RAZORPAY_KEY_ID from process.env:", process.env.RAZORPAY_KEY_ID);
+console.log(
+  "  RAZORPAY_KEY_SECRET from process.env:",
+  process.env.RAZORPAY_KEY_SECRET ? "SET" : "NOT SET",
+);
+
 export const config = {
   port: parseInt(process.env.PORT || "5000", 10),
   mongoUri: process.env.MONGODB_URI || "mongodb://localhost:27017/bisleri",

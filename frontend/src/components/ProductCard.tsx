@@ -13,7 +13,7 @@ export default function ProductCard({ product }: Props) {
   const handleAdd = () => {
     dispatch(
       addToCart({
-        _id: product._id,
+        id: product.id,
         name: product.name,
         price: product.price,
         imageUrl: product.imageUrl,

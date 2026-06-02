@@ -61,7 +61,7 @@ export default function Cart() {
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => (
             <div
-              key={item.product._id}
+              key={item.product.id}
               className="flex gap-4 bg-white rounded-xl border border-gray-100 p-4 shadow-sm"
             >
               <img
@@ -80,7 +80,7 @@ export default function Cart() {
               </div>
               <div className="flex flex-col items-end justify-between">
                 <button
-                  onClick={() => dispatch(removeFromCart(item.product._id))}
+                  onClick={() => dispatch(removeFromCart(item.product.id))}
                   className="text-gray-400 hover:text-red-500"
                 >
                   <FiTrash2 size={18} />
@@ -90,7 +90,7 @@ export default function Cart() {
                     onClick={() =>
                       dispatch(
                         updateQuantity({
-                          id: item.product._id,
+                          id: item.product.id,
                           quantity: item.quantity - 1,
                         }),
                       )
@@ -106,7 +106,7 @@ export default function Cart() {
                     onClick={() =>
                       dispatch(
                         updateQuantity({
-                          id: item.product._id,
+                          id: item.product.id,
                           quantity: item.quantity + 1,
                         }),
                       )

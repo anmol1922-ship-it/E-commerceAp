@@ -68,11 +68,11 @@ export default function AdminProducts() {
             </thead>
             <tbody className="divide-y">
               {products.map((p) => (
-                <tr key={p._id} className="hover:bg-gray-50">
+                <tr key={p.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{p.name}</td>
                   <td className="px-4 py-3">{p.size}</td>
                   <td className="px-4 py-3">
-                    {editingId === p._id ? (
+                    {editingId === p.id ? (
                       <input
                         type="number"
                         value={editForm.price}
@@ -86,7 +86,7 @@ export default function AdminProducts() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {editingId === p._id ? (
+                    {editingId === p.id ? (
                       <input
                         type="number"
                         value={editForm.stock}
@@ -100,10 +100,10 @@ export default function AdminProducts() {
                     )}
                   </td>
                   <td className="px-4 py-3 space-x-2">
-                    {editingId === p._id ? (
+                    {editingId === p.id ? (
                       <>
                         <button
-                          onClick={() => handleUpdate(p._id)}
+                          onClick={() => handleUpdate(p.id)}
                           className="text-emerald-600 font-medium"
                         >
                           Save
@@ -119,7 +119,7 @@ export default function AdminProducts() {
                       <>
                         <button
                           onClick={() => {
-                            setEditingId(p._id);
+                            setEditingId(p.id);
                             setEditForm({ price: p.price, stock: p.stock });
                           }}
                           className="text-blue-600"
@@ -127,7 +127,7 @@ export default function AdminProducts() {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(p._id)}
+                          onClick={() => handleDelete(p.id)}
                           className="text-red-600"
                         >
                           Delete

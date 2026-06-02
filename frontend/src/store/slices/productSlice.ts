@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import api from "../../api/axios";
 
 export interface Product {
-  _id: string;
+  id: string;
   name: string;
   slug: string;
   description: string;

@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { validationResult } from "express-validator";
-import { User } from "../models/User";
+import { prisma } from "../config/db";
 import { config } from "../config";
 import { AuthRequest } from "../middleware/auth";
+import { hashPassword, comparePassword } from "../models/User";
 
 const generateToken = (userId: string): string => {
   return jwt.sign({ userId }, config.jwtSecret, {
@@ -20,19 +21,23 @@ export const register = async (req: Request, res: Response) => {
 
     const { name, email, phone, password } = req.body;
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ message: "Email already registered" });
     }
 
-    const user = await User.create({ name, email, phone, password });
-    const token = generateToken(String(user._id));
+    const hashedPassword = await hashPassword(password);
+    const user = await prisma.user.create({
+      data: { name, email, phone, password: hashedPassword, role: "customer" },
+    });
+
+    const token = generateToken(user.id);
 
     res.status(201).json({
       success: true,
       token,
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -51,18 +56,19 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user || !(await user.comparePassword(password))) {
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user || !(await comparePassword(password, user.password))) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const token = generateToken(String(user._id));
+    const token = generateToken(user.id);
 
     res.json({
       success: true,
       token,
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -75,7 +81,18 @@ export const login = async (req: Request, res: Response) => {
 
 export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.user._id).select("-password");
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        addresses: true,
+        createdAt: true,
+      },
+    });
     res.json({ success: true, user });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -85,11 +102,17 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
     const { name, phone } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { name, phone },
-      { new: true, runValidators: true },
-    ).select("-password");
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { name, phone },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+      },
+    });
     res.json({ success: true, user });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -103,13 +126,19 @@ export const addAddress = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    const { street, area, city, pincode } = req.body;
+    const address = await prisma.address.create({
+      data: {
+        userId: req.user.id,
+        street,
+        area,
+        city: city || "Vasai",
+        pincode,
+        isDefault: false,
+      },
+    });
 
-    user.addresses.push(req.body);
-    await user.save();
-
-    res.json({ success: true, addresses: user.addresses });
+    res.json({ success: true, address });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

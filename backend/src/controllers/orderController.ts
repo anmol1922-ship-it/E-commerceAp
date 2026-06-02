@@ -1,9 +1,7 @@
 import { Response } from "express";
 import { validationResult } from "express-validator";
 import Razorpay from "razorpay";
-import { Order } from "../models/Order";
-import { Cart } from "../models/Cart";
-import { Product } from "../models/Product";
+import { prisma } from "../config/db";
 import { config } from "../config";
 import { AuthRequest } from "../middleware/auth";
 import crypto from "crypto";
@@ -24,42 +22,76 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { shippingAddress, deliverySlot, paymentMethod } = req.body;
+    const {
+      shippingAddress,
+      deliverySlot,
+      paymentMethod,
+      items: requestItems,
+    } = req.body;
 
-    // Get cart
-    const cart = await Cart.findOne({ user: req.user._id }).populate(
-      "items.product",
-    );
-    if (!cart || cart.items.length === 0) {
+    // Get stored cart with items
+    const cart = await prisma.cart.findUnique({
+      where: { userId: req.user.id },
+      include: { items: { include: { product: true } } },
+    });
+
+    const useRequestItems = !cart || cart.items.length === 0;
+
+    if (useRequestItems && (!requestItems || requestItems.length === 0)) {
       return res.status(400).json({ message: "Cart is empty" });
     }
 
-    // Build order items and calculate subtotal
+    // Validate products and calculate subtotal
     const items: any[] = [];
     let subtotal = 0;
 
-    for (const cartItem of cart.items) {
-      const product = cartItem.product as any;
-      if (!product || !product.isAvailable) {
-        return res
-          .status(400)
-          .json({
+    if (useRequestItems) {
+      for (const requestItem of requestItems) {
+        const product = await prisma.product.findUnique({
+          where: { id: requestItem.product },
+        });
+
+        if (!product || !product.isAvailable) {
+          return res.status(400).json({
+            message: `Product ${product?.name || requestItem.product} is not available`,
+          });
+        }
+        if (product.stock < requestItem.quantity) {
+          return res.status(400).json({
+            message: `Insufficient stock for ${product.name}`,
+          });
+        }
+
+        items.push({
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: requestItem.quantity,
+        });
+        subtotal += Number(product.price) * requestItem.quantity;
+      }
+    } else {
+      for (const cartItem of cart.items) {
+        const product = cartItem.product;
+        if (!product || !product.isAvailable) {
+          return res.status(400).json({
             message: `Product ${product?.name || "unknown"} is not available`,
           });
-      }
-      if (product.stock < cartItem.quantity) {
-        return res
-          .status(400)
-          .json({ message: `Insufficient stock for ${product.name}` });
-      }
+        }
+        if (product.stock < cartItem.quantity) {
+          return res.status(400).json({
+            message: `Insufficient stock for ${product.name}`,
+          });
+        }
 
-      items.push({
-        product: product._id,
-        name: product.name,
-        price: product.price,
-        quantity: cartItem.quantity,
-      });
-      subtotal += product.price * cartItem.quantity;
+        items.push({
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: cartItem.quantity,
+        });
+        subtotal += Number(product.price) * cartItem.quantity;
+      }
     }
 
     const gst = Math.round(subtotal * GST_RATE * 100) / 100;
@@ -68,50 +100,93 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     const totalAmount =
       Math.round((subtotal + gst + deliveryCharge) * 100) / 100;
 
-    const order = await Order.create({
-      user: req.user._id,
-      items,
-      shippingAddress,
-      deliverySlot,
-      paymentMethod,
-      subtotal,
-      gst,
-      deliveryCharge,
-      totalAmount,
-    });
-
-    // Reduce stock
-    for (const cartItem of cart.items) {
-      await Product.findByIdAndUpdate((cartItem.product as any)._id, {
-        $inc: { stock: -cartItem.quantity, popularity: cartItem.quantity },
+    // Create order with transaction
+    const order = await prisma.$transaction(async (tx: any) => {
+      // Create order
+      const newOrder = await tx.order.create({
+        data: {
+          userId: req.user.id,
+          paymentMethod: paymentMethod as "razorpay" | "cod",
+          shippingAddress: JSON.stringify(shippingAddress),
+          subtotal,
+          gst,
+          deliveryCharge,
+          totalAmount,
+          deliverySlot,
+          paymentStatus: paymentMethod === "razorpay" ? "pending" : "pod",
+          status: paymentMethod === "razorpay" ? "placed" : "confirmed",
+        },
       });
-    }
 
-    // Clear cart
-    cart.items = [];
-    await cart.save();
+      // Create order items
+      for (const item of items) {
+        await tx.orderItem.create({
+          data: {
+            orderId: newOrder.id,
+            productId: item.productId,
+            price: item.price,
+            quantity: item.quantity,
+          },
+        });
+
+        // Reduce stock and increase popularity
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: { decrement: item.quantity },
+            popularity: { increment: item.quantity },
+          },
+        });
+      }
+
+      // Clear cart items if cart exists
+      if (cart) {
+        await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+      }
+
+      return newOrder;
+    });
 
     // Create Razorpay order if online payment
     let razorpayOrder = null;
     if (paymentMethod === "razorpay") {
-      razorpayOrder = await razorpay.orders.create({
-        amount: Math.round(totalAmount * 100), // paise
-        currency: "INR",
-        receipt: order._id.toString(),
+      console.log("Creating Razorpay order with config:", {
+        hasKeyId: !!config.razorpayKeyId,
+        hasKeySecret: !!config.razorpayKeySecret,
       });
-      order.razorpayOrderId = razorpayOrder.id;
-      await order.save();
-    } else {
-      order.status = "confirmed";
-      await order.save();
+
+      if (!config.razorpayKeyId || !config.razorpayKeySecret) {
+        console.error("Missing Razorpay credentials");
+        return res.status(500).json({
+          message: "Payment gateway not configured. Please try COD.",
+        });
+      }
+
+      razorpayOrder = await razorpay.orders.create({
+        amount: Math.round(totalAmount * 100),
+        currency: "INR",
+        receipt: order.id.toString(),
+      });
+
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { razorpayOrderId: razorpayOrder.id },
+      });
     }
 
-    res.status(201).json({
+    const response = {
       success: true,
       order,
       razorpayOrder,
       razorpayKeyId: config.razorpayKeyId,
+    };
+
+    console.log("Sending response:", {
+      hasRazorpayKeyId: !!response.razorpayKeyId,
+      razorpayKeyId: response.razorpayKeyId,
     });
+
+    res.status(201).json(response);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -132,15 +207,22 @@ export const verifyPayment = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "Payment verification failed" });
     }
 
-    const order = await Order.findOne({ razorpayOrderId: razorpay_order_id });
+    const order = await prisma.order.findFirst({
+      where: { razorpayOrderId: razorpay_order_id },
+    });
+
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    order.paymentStatus = "paid";
-    order.razorpayPaymentId = razorpay_payment_id;
-    order.status = "confirmed";
-    await order.save();
+    const updatedOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        paymentStatus: "paid",
+        razorpayPaymentId: razorpay_payment_id,
+        status: "confirmed",
+      },
+    });
 
-    res.json({ success: true, order });
+    res.json({ success: true, order: updatedOrder });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -153,11 +235,14 @@ export const getMyOrders = async (req: AuthRequest, res: Response) => {
     const skip = (page - 1) * limit;
 
     const [orders, total] = await Promise.all([
-      Order.find({ user: req.user._id })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      Order.countDocuments({ user: req.user._id }),
+      prisma.order.findMany({
+        where: { userId: req.user.id },
+        include: { items: true },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.order.count({ where: { userId: req.user.id } }),
     ]);
 
     res.json({
@@ -172,10 +257,14 @@ export const getMyOrders = async (req: AuthRequest, res: Response) => {
 
 export const getOrderById = async (req: AuthRequest, res: Response) => {
   try {
-    const order = await Order.findOne({
-      _id: req.params.id,
-      user: req.user._id,
-    }).populate("items.product");
+    const order = await prisma.order.findFirst({
+      where: {
+        id: req.params.id,
+        userId: req.user.id,
+      },
+      include: { items: { include: { product: true } } },
+    });
+
     if (!order) return res.status(404).json({ message: "Order not found" });
     res.json({ success: true, order });
   } catch (error: any) {
@@ -189,17 +278,23 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const status = req.query.status as string;
-    const filter: any = {};
-    if (status) filter.status = status;
+
+    const where: any = {};
+    if (status) where.status = status;
 
     const skip = (page - 1) * limit;
     const [orders, total] = await Promise.all([
-      Order.find(filter)
-        .populate("user", "name email phone")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      Order.countDocuments(filter),
+      prisma.order.findMany({
+        where,
+        include: {
+          user: { select: { name: true, email: true, phone: true } },
+          items: true,
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.order.count({ where }),
     ]);
 
     res.json({
@@ -216,14 +311,26 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
 export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { status, trackingInfo } = req.body;
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status, ...(trackingInfo && { trackingInfo }) },
-      { new: true },
-    );
+
+    const order = await prisma.order.update({
+      where: { id: req.params.id },
+      data: {
+        status: status as
+          | "placed"
+          | "confirmed"
+          | "dispatched"
+          | "delivered"
+          | "cancelled",
+        ...(trackingInfo && { trackingInfo }),
+      },
+    });
+
     if (!order) return res.status(404).json({ message: "Order not found" });
     res.json({ success: true, order });
   } catch (error: any) {
+    if (error.code === "P2025") {
+      return res.status(404).json({ message: "Order not found" });
+    }
     res.status(500).json({ message: error.message });
   }
 };
@@ -231,23 +338,29 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
 // Admin: dashboard stats
 export const getDashboardStats = async (req: AuthRequest, res: Response) => {
   try {
-    const [totalOrders, totalRevenue, pendingOrders, products] =
-      await Promise.all([
-        Order.countDocuments(),
-        Order.aggregate([
-          { $group: { _id: null, total: { $sum: "$totalAmount" } } },
-        ]),
-        Order.countDocuments({ status: { $in: ["placed", "confirmed"] } }),
-        Product.countDocuments(),
-      ]);
+    const [totalOrders, pendingOrders, totalProducts] = await Promise.all([
+      prisma.order.count(),
+      prisma.order.count({
+        where: { status: { in: ["placed", "confirmed"] } },
+      }),
+      prisma.product.count(),
+    ]);
+
+    // Calculate total revenue
+    const revenueResult = await prisma.order.aggregate({
+      where: { paymentStatus: "paid" },
+      _sum: { totalAmount: true },
+    });
+
+    const totalRevenue = revenueResult._sum?.totalAmount || 0;
 
     res.json({
       success: true,
       stats: {
         totalOrders,
-        totalRevenue: totalRevenue[0]?.total || 0,
+        totalRevenue: Number(totalRevenue),
         pendingOrders,
-        totalProducts: products,
+        totalProducts,
       },
     });
   } catch (error: any) {
