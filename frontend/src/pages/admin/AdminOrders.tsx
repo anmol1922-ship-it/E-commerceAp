@@ -60,7 +60,7 @@ export default function AdminOrders() {
               <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <div>
                   <p className="text-sm font-mono text-gray-500">
-                    #{order._id.slice(-8)}
+                    #{order._id?.slice(-8)}
                   </p>
                   <p className="text-sm text-gray-700">
                     {order.user?.name} — {order.user?.phone}

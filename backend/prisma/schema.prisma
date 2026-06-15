@@ -20,7 +20,7 @@ model User {
   addresses Address[]
   cart      Cart?
   orders    Order[]
-
+ jarReturns JarReturn[]
   @@index([email])
   @@index([phone])
 }
@@ -59,10 +59,15 @@ model Product {
   updatedAt      DateTime    @updatedAt
   cartItems      CartItem[]
   orderItems     OrderItem[]
-
+  costPrice      Float    @default(0)
+  reorderLevel   Int      @default(20)
+  inventoryTransactions InventoryTransaction[]
+  supplierId     String?
+  supplier       Supplier? @relation(fields: [supplierId], references: [id])
   @@index([slug])
   @@index([category, price])
   @@index([isAvailable])
+  @@index([reorderLevel])
 }
 
 model Cart {
@@ -128,4 +133,65 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+}
+model InventoryTransaction {
+  id         String   @id @default(cuid())
+
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  type       String
+  quantity   Int
+  unitCost         Float?
+  totalCost        Float?
+  referenceNumber  String?
+  supplierId      String?
+  remarks    String?
+ notes           String?
+  createdAt  DateTime @default(now())
+ createdBy        String?
+  @@index([productId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([productId, createdAt])
+}
+model JarReturn {
+  id             String   @id @default(cuid())
+
+  customerName   String
+  customerPhone  String
+
+  jarsIssued     Int      @default(0)
+  jarsReturned   Int      @default(0)
+  pendingJars         Int      @default(0)
+  userId              String?
+  user                User? @relation(fields: [userId], references: [id])
+  depositAmount       Float    @default(0)
+
+  outstandingDeposit  Float    @default(0)
+
+  returnStatus        String   @default("pending")
+  lastReturnDate      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@index([userId])
+  @@index([customerPhone])
+  @@index([customerName])
+  @@index([createdAt])
+  @@index([returnStatus])
+
+}
+model Supplier {
+  id          String   @id @default(cuid())
+
+  name        String
+  phone       String?
+  email       String?
+
+  products    Product[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
 }
