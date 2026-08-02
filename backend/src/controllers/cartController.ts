@@ -108,9 +108,7 @@ export const removeFromCart = async (req: AuthRequest, res: Response) => {
 
     if (!cart) return res.status(404).json({ message: "Cart not found" });
 
-    const item = cart.items.find(
-      (item: any) => item.productId == Number(productId),
-    );
+    const item = cart.items.find((item: any) => item.productId === productId);
     if (item) {
       await prisma.cartItem.delete({ where: { id: item.id } });
     }

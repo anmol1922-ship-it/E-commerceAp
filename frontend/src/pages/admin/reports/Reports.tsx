@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-import { FiDownload, FiFileText, FiCalendar } from "react-icons/fi";
+import { FiDownload, FiFileText, FiCalendar, FiLoader } from "react-icons/fi";
+import toast from "react-hot-toast";
+import api from "../../../api/axios";
 
 interface Report {
   id: string;
@@ -14,6 +16,7 @@ export default function Reports() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [exportFormat, setExportFormat] = useState("excel");
+  const [generating, setGenerating] = useState<string | null>(null);
 
   const reports: Report[] = [
     {
@@ -75,13 +78,49 @@ export default function Reports() {
     },
   ];
 
-  const handleGenerateReport = (reportId: string, format: string) => {
-    console.log(`Generating ${reportId} report in ${format} format`);
-    console.log(`Period: ${startDate} to ${endDate}`);
-    // API call would go here
-    alert(
-      `Report generated: ${reportId}.${format}\nPeriod: ${startDate} to ${endDate}`,
-    );
+  const handleGenerateReport = async (reportId: string, format: string) => {
+    if (!startDate || !endDate) {
+      toast.error("Please select a date range first");
+      return;
+    }
+    const key = `${reportId}-${format}`;
+    setGenerating(key);
+    try {
+      const params: Record<string, string> = {
+        startDate,
+        endDate,
+        format: format === "excel" ? "csv" : format,
+      };
+
+      if (format === "json") {
+        const { data } = await api.get("/admin/export/orders", { params });
+        const blob = new Blob([JSON.stringify(data.data, null, 2)], {
+          type: "application/json",
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${reportId}-${startDate}-${endDate}.json`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+        const { data } = await api.get("/admin/export/orders", {
+          params,
+          responseType: "blob",
+        });
+        const url = window.URL.createObjectURL(new Blob([data]));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${reportId}-${startDate}-${endDate}.${format === "excel" ? "csv" : format}`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+      toast.success(`${reportId} report downloaded`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to generate report");
+    } finally {
+      setGenerating(null);
+    }
   };
 
   return (

@@ -64,8 +64,8 @@ export default function About() {
             Contact Us
           </h2>
           <div className="text-gray-600 space-y-2">
-            <p>📞 Phone: +91 98765 43210</p>
-            <p>📧 Email: order@bisleri-vasai.com</p>
+            <p>📞 Phone: +91 9766306706</p>
+            <p>📧 Email: orders@bisleri-vasai.com</p>
             <p>
               📍 Address: Bisleri Water Depot, Vasai West, Maharashtra 401202
             </p>

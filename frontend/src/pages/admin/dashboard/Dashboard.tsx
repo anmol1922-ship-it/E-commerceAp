@@ -8,323 +8,418 @@ import {
   FiUsers,
   FiAlertTriangle,
   FiRefreshCw,
+  FiLoader,
 } from "react-icons/fi";
+import api from "../../../api/axios";
 
-interface KPICard {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
-  trend: number;
-  isPositive: boolean;
-  bgColor: string;
-  textColor: string;
+interface KPIData {
+  ordersTodayCount: number;
+  ordersTodayAmount: number;
+  ordersTodayTrend: number;
+  revenueTodayAmount: number;
+  revenueTodayTrend: number;
+  profitTodayAmount: number;
+  profitTodayTrend: number;
+  activeCustomersCount: number;
+  activeCustomersTrend: number;
+  stockValueTotal: number;
+  stockValueTrend: number;
+  lowStockItemsCount: number;
+  pendingDeliveriesCount: number;
+  pendingDeliveriesTrend: number;
+  pendingJarReturnsCount: number;
+  pendingJarReturnsTrend: number;
 }
 
+interface MonthlyStats {
+  revenueThisMonth: number;
+  revenueTarget: number;
+  revenueProgress: number;
+  profitThisMonth: number;
+  profitMargin: number;
+  yearToDateRevenue: number;
+  yearToDateProfit: number;
+  averageOrderValue: number;
+}
+
+interface RecentOrder {
+  id: string;
+  customerName: string;
+  amount: number;
+  status: string;
+  itemCount: number;
+  createdAt: string;
+}
+
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
 export default function AdminDashboard() {
-  const [kpiData, setKpiData] = useState<KPICard[]>([
-    {
-      label: "Total Orders Today",
-      value: "₹24,500",
-      icon: <FiShoppingCart className="w-8 h-8" />,
-      trend: 12,
-      isPositive: true,
-      bgColor: "bg-blue-50",
-      textColor: "text-blue-600",
-    },
-    {
-      label: "Revenue Today",
-      value: "₹18,400",
-      icon: <FiDollarSign className="w-8 h-8" />,
-      trend: 8,
-      isPositive: true,
-      bgColor: "bg-green-50",
-      textColor: "text-green-600",
-    },
-    {
-      label: "Profit Today",
-      value: "₹6,200",
-      icon: <FiTrendingUp className="w-8 h-8" />,
-      trend: 5,
-      isPositive: true,
-      bgColor: "bg-emerald-50",
-      textColor: "text-emerald-600",
-    },
-    {
-      label: "Active Customers",
-      value: "483",
-      icon: <FiUsers className="w-8 h-8" />,
-      trend: 15,
-      isPositive: true,
-      bgColor: "bg-purple-50",
-      textColor: "text-purple-600",
-    },
-    {
-      label: "Total Stock Value",
-      value: "₹82,500",
-      icon: <FiBox className="w-8 h-8" />,
-      trend: -3,
-      isPositive: false,
-      bgColor: "bg-orange-50",
-      textColor: "text-orange-600",
-    },
-    {
-      label: "Low Stock Items",
-      value: "12",
-      icon: <FiAlertTriangle className="w-8 h-8" />,
-      trend: 8,
-      isPositive: false,
-      bgColor: "bg-red-50",
-      textColor: "text-red-600",
-    },
-    {
-      label: "Pending Deliveries",
-      value: "45",
-      icon: <FiBox className="w-8 h-8" />,
-      trend: -5,
-      isPositive: true,
-      bgColor: "bg-indigo-50",
-      textColor: "text-indigo-600",
-    },
-    {
-      label: "Pending Jar Returns",
-      value: "8",
-      icon: <FiRefreshCw className="w-8 h-8" />,
-      trend: 12,
-      isPositive: false,
-      bgColor: "bg-pink-50",
-      textColor: "text-pink-600",
-    },
-  ]);
+  const [kpiData, setKpiData] = useState<KPIData | null>(null);
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null);
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [kpiRes, monthlyRes, ordersRes] = await Promise.all([
+        api.get("/admin/dashboard/kpis"),
+        api.get("/admin/dashboard/monthly-stats"),
+        api.get("/admin/dashboard/recent-orders?limit=10"),
+      ]);
+
+      if (kpiRes.data.success) setKpiData(kpiRes.data.data);
+      if (monthlyRes.data.success) setMonthlyStats(monthlyRes.data.data);
+      if (ordersRes.data.success) setRecentOrders(ordersRes.data.data);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "delivered":
+        return "bg-green-100 text-green-700";
+      case "dispatched":
+        return "bg-blue-100 text-blue-700";
+      case "confirmed":
+        return "bg-yellow-100 text-yellow-700";
+      case "placed":
+        return "bg-purple-100 text-purple-700";
+      case "cancelled":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <FiLoader className="w-8 h-8 animate-spin text-emerald-600" />
+        <span className="ml-3 text-gray-500">Loading dashboard...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-center">
+        <FiAlertTriangle className="w-12 h-12 text-red-400 mb-4" />
+        <p className="text-red-600 font-medium">{error}</p>
+        <button
+          onClick={fetchDashboardData}
+          className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const kpiCards = kpiData
+    ? [
+        {
+          label: "Orders Today",
+          value: `${kpiData.ordersTodayCount} (${formatCurrency(kpiData.ordersTodayAmount)})`,
+          icon: <FiShoppingCart className="w-8 h-8" />,
+          trend: kpiData.ordersTodayTrend,
+          bgColor: "bg-blue-50",
+          textColor: "text-blue-600",
+        },
+        {
+          label: "Revenue Today",
+          value: formatCurrency(kpiData.revenueTodayAmount),
+          icon: <FiDollarSign className="w-8 h-8" />,
+          trend: kpiData.revenueTodayTrend,
+          bgColor: "bg-green-50",
+          textColor: "text-green-600",
+        },
+        {
+          label: "Profit Today",
+          value: formatCurrency(kpiData.profitTodayAmount),
+          icon: <FiTrendingUp className="w-8 h-8" />,
+          trend: kpiData.profitTodayTrend,
+          bgColor: "bg-emerald-50",
+          textColor: "text-emerald-600",
+        },
+        {
+          label: "Active Customers (30d)",
+          value: kpiData.activeCustomersCount.toString(),
+          icon: <FiUsers className="w-8 h-8" />,
+          trend: kpiData.activeCustomersTrend,
+          bgColor: "bg-purple-50",
+          textColor: "text-purple-600",
+        },
+        {
+          label: "Total Stock Value",
+          value: formatCurrency(kpiData.stockValueTotal),
+          icon: <FiBox className="w-8 h-8" />,
+          trend: kpiData.stockValueTrend,
+          bgColor: "bg-orange-50",
+          textColor: "text-orange-600",
+        },
+        {
+          label: "Low Stock Items",
+          value: kpiData.lowStockItemsCount.toString(),
+          icon: <FiAlertTriangle className="w-8 h-8" />,
+          trend: 0,
+          bgColor: kpiData.lowStockItemsCount > 0 ? "bg-red-50" : "bg-green-50",
+          textColor:
+            kpiData.lowStockItemsCount > 0 ? "text-red-600" : "text-green-600",
+        },
+        {
+          label: "Pending Deliveries",
+          value: kpiData.pendingDeliveriesCount.toString(),
+          icon: <FiBox className="w-8 h-8" />,
+          trend: kpiData.pendingDeliveriesTrend,
+          bgColor: "bg-indigo-50",
+          textColor: "text-indigo-600",
+        },
+        {
+          label: "Pending Jar Returns",
+          value: kpiData.pendingJarReturnsCount.toString(),
+          icon: <FiRefreshCw className="w-8 h-8" />,
+          trend: kpiData.pendingJarReturnsTrend,
+          bgColor: "bg-pink-50",
+          textColor: "text-pink-600",
+        },
+      ]
+    : [];
 
   return (
     <div className="space-y-6">
       {/* Page Title */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-1">
-          Welcome back! Here's your business overview.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-500 mt-1">
+            Welcome back! Here's your business overview.
+          </p>
+        </div>
+        <button
+          onClick={fetchDashboardData}
+          className="flex items-center gap-2 px-4 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+        >
+          <FiRefreshCw size={16} />
+          Refresh
+        </button>
       </div>
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiData.map((kpi, index) => (
-          <div
-            key={index}
-            className={`${kpi.bgColor} rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition`}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">{kpi.label}</p>
-                <h3 className="text-2xl font-bold text-gray-900 mt-2">
-                  {kpi.value}
-                </h3>
-                <div className="flex items-center gap-1 mt-2">
-                  {kpi.isPositive ? (
-                    <FiTrendingUp className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <FiTrendingDown className="w-4 h-4 text-red-600" />
+        {kpiCards.map((kpi, index) => {
+          const isPositive = kpi.trend >= 0;
+          return (
+            <div
+              key={index}
+              className={`${kpi.bgColor} rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition`}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">
+                    {kpi.label}
+                  </p>
+                  <h3 className="text-2xl font-bold text-gray-900 mt-2">
+                    {kpi.value}
+                  </h3>
+                  {kpi.trend !== 0 && (
+                    <div className="flex items-center gap-1 mt-2">
+                      {isPositive ? (
+                        <FiTrendingUp className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <FiTrendingDown className="w-4 h-4 text-red-600" />
+                      )}
+                      <span
+                        className={`text-sm font-medium ${
+                          isPositive ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {isPositive ? "+" : ""}
+                        {kpi.trend}%
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        vs yesterday
+                      </span>
+                    </div>
                   )}
-                  <span
-                    className={`text-sm font-medium ${
-                      kpi.isPositive ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {kpi.isPositive ? "+" : ""}
-                    {kpi.trend}%
-                  </span>
-                  <span className="text-xs text-gray-500">vs yesterday</span>
                 </div>
+                <div className={`${kpi.textColor} opacity-20`}>{kpi.icon}</div>
               </div>
-              <div className={`${kpi.textColor} opacity-20`}>{kpi.icon}</div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Monthly Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue This Month */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Revenue This Month
-          </h3>
-          <div className="mb-4">
-            <p className="text-4xl font-bold text-emerald-600">₹5,24,000</p>
-            <p className="text-sm text-gray-500 mt-1">
-              <span className="inline-flex items-center gap-1 text-green-600">
-                <FiTrendingUp size={16} />
-                14% increase
-              </span>
-              compared to last month
-            </p>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Target</span>
-              <span className="font-medium">₹6,00,000</span>
+      {monthlyStats && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                Revenue This Month
+              </h3>
+              <div className="mb-4">
+                <p className="text-4xl font-bold text-emerald-600">
+                  {formatCurrency(monthlyStats.revenueThisMonth)}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Target: {formatCurrency(monthlyStats.revenueTarget)}
+                </p>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Progress</span>
+                  <span className="font-medium">
+                    {monthlyStats.revenueProgress}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-emerald-600 h-2 rounded-full transition-all"
+                    style={{
+                      width: `${Math.min(monthlyStats.revenueProgress, 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-emerald-600 h-2 rounded-full"
-                style={{ width: "87%" }}
-              />
+
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                Profit This Month
+              </h3>
+              <div className="mb-4">
+                <p className="text-4xl font-bold text-blue-600">
+                  {formatCurrency(monthlyStats.profitThisMonth)}
+                </p>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Profit Margin</span>
+                  <span className="font-medium">
+                    {monthlyStats.profitMargin}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all"
+                    style={{
+                      width: `${Math.min(monthlyStats.profitMargin, 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Profit This Month */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Profit This Month
-          </h3>
-          <div className="mb-4">
-            <p className="text-4xl font-bold text-blue-600">₹1,68,000</p>
-            <p className="text-sm text-gray-500 mt-1">
-              <span className="inline-flex items-center gap-1 text-green-600">
-                <FiTrendingUp size={16} />
-                32% increase
-              </span>
-              compared to last month
-            </p>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Profit Margin</span>
-              <span className="font-medium">32%</span>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <p className="text-sm font-medium text-gray-600">
+                Revenue This Year
+              </p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
+                {formatCurrency(monthlyStats.yearToDateRevenue)}
+              </p>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full"
-                style={{ width: "32%" }}
-              />
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <p className="text-sm font-medium text-gray-600">
+                Profit This Year
+              </p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
+                {formatCurrency(monthlyStats.yearToDateProfit)}
+              </p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+              <p className="text-sm font-medium text-gray-600">
+                Average Order Value
+              </p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
+                {formatCurrency(monthlyStats.averageOrderValue)}
+              </p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Year Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-600">Revenue This Year</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">₹32,50,000</p>
-          <p className="text-xs text-green-600 mt-2">↑ 28% vs last year</p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-600">Profit This Year</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">₹10,40,000</p>
-          <p className="text-xs text-green-600 mt-2">↑ 35% vs last year</p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-600">
-            Average Order Value
-          </p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">₹1,240</p>
-          <p className="text-xs text-green-600 mt-2">↑ 8% vs last month</p>
-        </div>
-      </div>
-
-      {/* Chart Placeholders */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm h-80">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Daily Revenue
-          </h3>
-          <div className="flex items-center justify-center h-full text-gray-400">
-            Chart will be rendered here (Chart.js / Recharts)
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm h-80">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Best Selling Products
-          </h3>
-          <div className="flex items-center justify-center h-full text-gray-400">
-            Chart will be rendered here (Chart.js / Recharts)
-          </div>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Recent Orders */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Orders</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-medium text-gray-600">
-                  Order ID
-                </th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">
-                  Customer
-                </th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">
-                  Amount
-                </th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">
-                  Status
-                </th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">
-                  Date
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                {
-                  id: "ORD-001",
-                  customer: "Anmol Gupta",
-                  amount: "₹250",
-                  status: "Delivered",
-                  date: "2026-06-01",
-                },
-                {
-                  id: "ORD-002",
-                  customer: "Priya Singh",
-                  amount: "₹480",
-                  status: "Dispatched",
-                  date: "2026-06-01",
-                },
-                {
-                  id: "ORD-003",
-                  customer: "Rajesh Kumar",
-                  amount: "₹175",
-                  status: "Confirmed",
-                  date: "2026-06-01",
-                },
-              ].map((order) => (
-                <tr
-                  key={order.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition"
-                >
-                  <td className="py-3 px-4 font-medium text-gray-900">
-                    {order.id}
-                  </td>
-                  <td className="py-3 px-4 text-gray-600">{order.customer}</td>
-                  <td className="py-3 px-4 font-medium text-gray-900">
-                    {order.amount}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                        order.status === "Delivered"
-                          ? "bg-green-100 text-green-700"
-                          : order.status === "Dispatched"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-gray-600">{order.date}</td>
+        {recentOrders.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">No recent orders</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    Order ID
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    Customer
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    Items
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    Amount
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    Status
+                  </th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    Date
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {recentOrders.map((order) => (
+                  <tr
+                    key={order.id}
+                    className="border-b border-gray-100 hover:bg-gray-50 transition"
+                  >
+                    <td className="py-3 px-4 font-medium text-gray-900">
+                      {order.id.slice(0, 12)}...
+                    </td>
+                    <td className="py-3 px-4 text-gray-600">
+                      {order.customerName}
+                    </td>
+                    <td className="py-3 px-4 text-gray-600">
+                      {order.itemCount}
+                    </td>
+                    <td className="py-3 px-4 font-medium text-gray-900">
+                      {formatCurrency(order.amount)}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(order.status)}`}
+                      >
+                        {order.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-gray-600">
+                      {new Date(order.createdAt).toLocaleDateString("en-IN")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

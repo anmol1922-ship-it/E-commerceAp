@@ -11,9 +11,18 @@ const razorpay = new Razorpay({
   key_secret: config.razorpayKeySecret,
 });
 
-const GST_RATE = 0.18;
-const FREE_DELIVERY_THRESHOLD = 500;
-const DELIVERY_CHARGE = 30;
+const SETTINGS_ID = "app_settings";
+
+const getBusinessConfig = async () => {
+  const settings = await prisma.appSettings.findUnique({
+    where: { id: SETTINGS_ID },
+  });
+  return {
+    gstRate: settings?.gstRate ?? 0.18,
+    freeDeliveryThreshold: settings?.freeDeliveryThreshold ?? 500,
+    deliveryCharge: settings?.deliveryCharge ?? 30,
+  };
+};
 
 export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
@@ -94,9 +103,12 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const gst = Math.round(subtotal * GST_RATE * 100) / 100;
+    const bizConfig = await getBusinessConfig();
+    const gst = Math.round(subtotal * bizConfig.gstRate * 100) / 100;
     const deliveryCharge =
-      subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_CHARGE;
+      subtotal >= bizConfig.freeDeliveryThreshold
+        ? 0
+        : bizConfig.deliveryCharge;
     const totalAmount =
       Math.round((subtotal + gst + deliveryCharge) * 100) / 100;
 

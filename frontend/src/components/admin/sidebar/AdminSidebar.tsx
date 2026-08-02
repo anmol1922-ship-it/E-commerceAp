@@ -26,7 +26,7 @@ const menuItems = [
   {
     label: "Dashboard",
     icon: FiGrid,
-    path: "/admin/dashboard",
+    path: "/admin",
   },
   {
     label: "Orders",
@@ -34,53 +34,34 @@ const menuItems = [
     path: "/admin/orders",
   },
   {
-    label: "Customers",
-    icon: FiUsers,
-    path: "/admin/customers",
-  },
-  {
     label: "Products",
     icon: FiBox,
     path: "/admin/products",
   },
   {
-    label: "Inventory Management",
+    label: "Inventory",
     icon: FiArchive,
-    path: "/admin/dashboard/inventory",
+    path: "/admin/inventory",
     submenu: [
-      { label: "Stock Levels", path: "/admin/dashboard/inventory" },
-      { label: "Stock Ledger", path: "/admin/dashboard/inventory/ledger" },
-      { label: "Stock Forecast", path: "/admin/dashboard/inventory/forecast" },
+      { label: "Stock Levels", path: "/admin/inventory" },
+      { label: "Stock Ledger", path: "/admin/inventory/ledger" },
+      { label: "Stock Forecast", path: "/admin/inventory/forecast" },
     ],
-  },
-  {
-    label: "Revenue Analytics",
-    icon: FiTrendingUp,
-    path: "/admin/revenue",
   },
   {
     label: "Profit Analytics",
     icon: FiDollarSign,
-    path: "/admin/dashboard/profit",
-    submenu: [
-      { label: "Daily Profit", path: "/admin/dashboard/profit" },
-      { label: "Monthly Report", path: "/admin/dashboard/profit" },
-    ],
+    path: "/admin/profit",
   },
   {
-    label: "Jar Return Management",
+    label: "Jar Returns",
     icon: FiRefreshCw,
-    path: "/admin/dashboard/jar-returns",
+    path: "/admin/jar-returns",
   },
   {
     label: "Reports",
     icon: FiDownload,
-    path: "/admin/dashboard/reports",
-  },
-  {
-    label: "Settings",
-    icon: FiSettings,
-    path: "/admin/settings",
+    path: "/admin/reports",
   },
 ];
 

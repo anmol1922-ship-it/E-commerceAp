@@ -1,4 +1,14 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import api from "../api/axios";
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string;
+  slug: string;
+}
 
 const testimonials = [
   {
@@ -19,6 +29,22 @@ const testimonials = [
 ];
 
 export default function Home() {
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      try {
+        const { data } = await api.get("/products?limit=4&sort=popularity");
+        if (data.success) {
+          setFeaturedProducts(data.products);
+        }
+      } catch {
+        // silently fail - home page still works without featured products
+      }
+    };
+    fetchFeatured();
+  }, []);
+
   return (
     <div>
       {/* Hero */}
@@ -69,36 +95,19 @@ export default function Home() {
           Available for same-day delivery in Vasai
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-10">
-          {[
-            {
-              name: "20L Jar",
-              price: "₹100",
-              img: "/images/bisleri/bisleri-20l.png",
-            },
-            {
-              name: "1L Case (12)",
-              price: "₹240",
-              img: "/images/bisleri/bisleri-1ltr-box.jpg",
-            },
-            {
-              name: "500ml Case (24)",
-              price: "₹240",
-              img: "/images/bisleri/bisleri-500ml-box.png",
-            },
-            {
-              name: "2L Case (9)",
-              price: "₹180",
-              img: "/images/bisleri/bisleri-2L.png",
-            },
-          ].map((p) => (
+          {featuredProducts.map((p) => (
             <Link
               to="/products"
-              key={p.name}
+              key={p.id}
               className="bg-white rounded-2xl p-6 border border-gray-100 text-center hover:shadow-md transition"
             >
-              <img src={p.img} alt={p.name} className="h-28 mx-auto mb-4" />
+              <img
+                src={p.imageUrl}
+                alt={p.name}
+                className="h-28 mx-auto mb-4"
+              />
               <h3 className="font-semibold text-gray-900">{p.name}</h3>
-              <p className="text-emerald-600 font-bold mt-1">{p.price}</p>
+              <p className="text-emerald-600 font-bold mt-1">₹{p.price}</p>
             </Link>
           ))}
         </div>

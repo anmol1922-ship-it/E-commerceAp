@@ -195,3 +195,49 @@ model Supplier {
 
   @@index([name])
 }
+
+model AppSettings {
+  id                    String   @id @default("app_settings")
+  gstRate               Float    @default(0.18)
+  deliveryCharge        Float    @default(30)
+  freeDeliveryThreshold Float    @default(500)
+  minimumOrderAmount    Float    @default(0)
+  servicablePincodes    String[] @default(["401201","401202","401203","401204","401205","401207","401208","401209","401210","401301","401302","401303","401304","401305"])
+  deliverySlots         String[] @default(["9 AM – 12 PM","12 PM – 3 PM","3 PM – 6 PM","6 PM – 9 PM"])
+  businessName          String   @default("Bisleri Vasai")
+  supportPhone          String   @default("")
+  supportEmail          String   @default("")
+  businessHoursStart    String   @default("09:00")
+  businessHoursEnd      String   @default("21:00")
+  privacyPolicyUrl      String   @default("")
+  termsUrl              String   @default("")
+  aboutText             String   @default("")
+  appVersion            String   @default("1.0.0")
+  maintenanceMode       Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String   @default("")
+  imageUrl    String   @default("")
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([isActive])
+}
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      String   @default("string")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}

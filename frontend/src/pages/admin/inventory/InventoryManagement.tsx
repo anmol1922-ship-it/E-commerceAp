@@ -1,11 +1,6 @@
-import React, { useState } from "react";
-import {
-  FiPlus,
-  FiSearch,
-  FiDownload,
-  FiEdit2,
-  FiAlertTriangle,
-} from "react-icons/fi";
+import React, { useEffect, useMemo, useState } from "react";
+import { FiPlus, FiSearch, FiDownload, FiEdit2 } from "react-icons/fi";
+import api from "../../../api/axios";
 
 interface InventoryItem {
   id: string;
@@ -18,87 +13,56 @@ interface InventoryItem {
   reorderLevel: number;
   status: "healthy" | "low" | "out";
   lastUpdated: string;
+  costPrice: number;
+  supplier?: string;
 }
 
 export default function InventoryManagement() {
+  const [inventoryData, setInventoryData] = useState<InventoryItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddStockModal, setShowAddStockModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const inventoryData: InventoryItem[] = [
-    {
-      id: "prod-1",
-      sku: "BIS-20L-001",
-      productName: "20L Jar",
-      openingStock: 150,
-      stockAdded: 100,
-      stockSold: 85,
-      currentStock: 165,
-      reorderLevel: 30,
-      status: "healthy",
-      lastUpdated: "2026-06-01 10:30 AM",
-    },
-    {
-      id: "prod-2",
-      sku: "BIS-10L-001",
-      productName: "10L Jar",
-      openingStock: 200,
-      stockAdded: 50,
-      stockSold: 120,
-      currentStock: 130,
-      reorderLevel: 40,
-      status: "healthy",
-      lastUpdated: "2026-06-01 09:15 AM",
-    },
-    {
-      id: "prod-3",
-      sku: "BIS-5L-001",
-      productName: "5L Jar",
-      openingStock: 100,
-      stockAdded: 0,
-      stockSold: 95,
-      currentStock: 5,
-      reorderLevel: 25,
-      status: "out",
-      lastUpdated: "2026-06-01 02:45 PM",
-    },
-    {
-      id: "prod-4",
-      sku: "BIS-2L-CASE-001",
-      productName: "2L Case (9 bottles)",
-      openingStock: 300,
-      stockAdded: 200,
-      stockSold: 180,
-      currentStock: 320,
-      reorderLevel: 50,
-      status: "healthy",
-      lastUpdated: "2026-05-31 04:20 PM",
-    },
-    {
-      id: "prod-5",
-      sku: "BIS-1L-CASE-001",
-      productName: "1L Case (12 bottles)",
-      openingStock: 250,
-      stockAdded: 0,
-      stockSold: 210,
-      currentStock: 40,
-      reorderLevel: 60,
-      status: "low",
-      lastUpdated: "2026-06-01 11:00 AM",
-    },
-    {
-      id: "prod-6",
-      sku: "BIS-500ML-CASE-001",
-      productName: "500ml Case (24 bottles)",
-      openingStock: 400,
-      stockAdded: 150,
-      stockSold: 320,
-      currentStock: 230,
-      reorderLevel: 80,
-      status: "healthy",
-      lastUpdated: "2026-05-31 03:30 PM",
-    },
-  ];
+  useEffect(() => {
+    const fetchInventory = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await api.get("/admin/inventory/products", {
+          params: { limit: 100 },
+        });
+
+        const products = response.data?.data ?? [];
+
+        const mappedData: InventoryItem[] = products.map((item: any) => ({
+          id: item.id,
+          sku: item.slug?.toUpperCase() ?? item.id,
+          productName: item.name,
+          openingStock: item.stock ?? 0,
+          stockAdded: 0,
+          stockSold: 0,
+          currentStock: item.stock ?? 0,
+          reorderLevel: item.reorderLevel ?? 0,
+          status: item.status ?? "healthy",
+          lastUpdated: "—",
+          costPrice: item.costPrice ?? 0,
+          supplier: item.supplier ?? "—",
+        }));
+
+        setInventoryData(mappedData);
+      } catch (err) {
+        console.error(err);
+        setError("Unable to load inventory data from the database.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInventory();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -126,15 +90,49 @@ export default function InventoryManagement() {
     }
   };
 
-  const filteredData = inventoryData.filter(
-    (item) =>
-      item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchTerm.toLowerCase()),
+  const totalStockValue = useMemo(
+    () =>
+      inventoryData.reduce(
+        (sum, item) => sum + item.currentStock * item.costPrice,
+        0,
+      ),
+    [inventoryData],
   );
+
+  const totalUnits = useMemo(
+    () => inventoryData.reduce((sum, item) => sum + item.currentStock, 0),
+    [inventoryData],
+  );
+
+  const lowStockItems = useMemo(
+    () => inventoryData.filter((item) => item.status === "low").length,
+    [inventoryData],
+  );
+
+  const outOfStockItems = useMemo(
+    () => inventoryData.filter((item) => item.status === "out").length,
+    [inventoryData],
+  );
+
+  const filteredData = useMemo(
+    () =>
+      inventoryData.filter(
+        (item) =>
+          item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.sku.toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
+    [inventoryData, searchTerm],
+  );
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(value);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
@@ -159,7 +157,6 @@ export default function InventoryManagement() {
         </div>
       </div>
 
-      {/* Search Bar */}
       <div className="relative">
         <FiSearch className="absolute left-3 top-3 text-gray-400 size-5" />
         <input
@@ -171,114 +168,131 @@ export default function InventoryManagement() {
         />
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <p className="text-sm text-gray-600">Total Stock Value</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">₹82,500</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">
+            {formatCurrency(totalStockValue)}
+          </p>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <p className="text-sm text-gray-600">Total Units</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">1,290</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{totalUnits}</p>
         </div>
         <div className="bg-orange-50 rounded-lg border border-orange-200 p-4">
           <p className="text-sm text-orange-700 font-medium">Low Stock Items</p>
-          <p className="text-2xl font-bold text-orange-900 mt-1">2</p>
+          <p className="text-2xl font-bold text-orange-900 mt-1">
+            {lowStockItems}
+          </p>
         </div>
         <div className="bg-red-50 rounded-lg border border-red-200 p-4">
           <p className="text-sm text-red-700 font-medium">Out of Stock</p>
-          <p className="text-2xl font-bold text-red-900 mt-1">1</p>
+          <p className="text-2xl font-bold text-red-900 mt-1">
+            {outOfStockItems}
+          </p>
         </div>
       </div>
 
-      {/* Inventory Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left py-3 px-6 font-medium text-gray-700">
-                  Product
-                </th>
-                <th className="text-left py-3 px-6 font-medium text-gray-700">
-                  SKU
-                </th>
-                <th className="text-center py-3 px-6 font-medium text-gray-700">
-                  Opening Stock
-                </th>
-                <th className="text-center py-3 px-6 font-medium text-gray-700">
-                  Added
-                </th>
-                <th className="text-center py-3 px-6 font-medium text-gray-700">
-                  Sold
-                </th>
-                <th className="text-center py-3 px-6 font-medium text-gray-700">
-                  Current
-                </th>
-                <th className="text-center py-3 px-6 font-medium text-gray-700">
-                  Reorder Level
-                </th>
-                <th className="text-center py-3 px-6 font-medium text-gray-700">
-                  Status
-                </th>
-                <th className="text-center py-3 px-6 font-medium text-gray-700">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.map((item) => (
-                <tr
-                  key={item.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition"
-                >
-                  <td className="py-3 px-6 font-medium text-gray-900">
-                    {item.productName}
-                  </td>
-                  <td className="py-3 px-6 text-gray-600">{item.sku}</td>
-                  <td className="py-3 px-6 text-center text-gray-600">
-                    {item.openingStock}
-                  </td>
-                  <td className="py-3 px-6 text-center text-green-600 font-medium">
-                    +{item.stockAdded}
-                  </td>
-                  <td className="py-3 px-6 text-center text-red-600 font-medium">
-                    -{item.stockSold}
-                  </td>
-                  <td className="py-3 px-6 text-center font-bold text-gray-900">
-                    {item.currentStock}
-                  </td>
-                  <td className="py-3 px-6 text-center text-gray-600">
-                    {item.reorderLevel}
-                  </td>
-                  <td className="py-3 px-6 text-center">
-                    <span
-                      className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                        item.status,
-                      )}`}
-                    >
-                      {getStatusLabel(item.status)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-6 text-center">
-                    <button
-                      onClick={() => {
-                        setSelectedProduct(item.id);
-                        setShowAddStockModal(true);
-                      }}
-                      className="text-emerald-600 hover:text-emerald-700"
-                    >
-                      <FiEdit2 size={18} />
-                    </button>
-                  </td>
+          {loading ? (
+            <div className="p-6 text-gray-600">Loading inventory data...</div>
+          ) : error ? (
+            <div className="p-6 text-red-600">{error}</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left py-3 px-6 font-medium text-gray-700">
+                    Product
+                  </th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-700">
+                    SKU
+                  </th>
+                  <th className="text-center py-3 px-6 font-medium text-gray-700">
+                    Opening Stock
+                  </th>
+                  <th className="text-center py-3 px-6 font-medium text-gray-700">
+                    Added
+                  </th>
+                  <th className="text-center py-3 px-6 font-medium text-gray-700">
+                    Sold
+                  </th>
+                  <th className="text-center py-3 px-6 font-medium text-gray-700">
+                    Current
+                  </th>
+                  <th className="text-center py-3 px-6 font-medium text-gray-700">
+                    Reorder Level
+                  </th>
+                  <th className="text-center py-3 px-6 font-medium text-gray-700">
+                    Status
+                  </th>
+                  <th className="text-center py-3 px-6 font-medium text-gray-700">
+                    Action
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-6 text-center text-gray-500">
+                      No inventory items found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredData.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="border-b border-gray-100 hover:bg-gray-50 transition"
+                    >
+                      <td className="py-3 px-6 font-medium text-gray-900">
+                        {item.productName}
+                      </td>
+                      <td className="py-3 px-6 text-gray-600">{item.sku}</td>
+                      <td className="py-3 px-6 text-center text-gray-600">
+                        {item.openingStock}
+                      </td>
+                      <td className="py-3 px-6 text-center text-green-600 font-medium">
+                        +{item.stockAdded}
+                      </td>
+                      <td className="py-3 px-6 text-center text-red-600 font-medium">
+                        -{item.stockSold}
+                      </td>
+                      <td className="py-3 px-6 text-center font-bold text-gray-900">
+                        {item.currentStock}
+                      </td>
+                      <td className="py-3 px-6 text-center text-gray-600">
+                        {item.reorderLevel}
+                      </td>
+                      <td className="py-3 px-6 text-center">
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                            item.status,
+                          )}`}
+                        >
+                          {getStatusLabel(item.status)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-6 text-center">
+                        <button
+                          onClick={() => {
+                            setSelectedProduct(item.id);
+                            setShowAddStockModal(true);
+                          }}
+                          className="text-emerald-600 hover:text-emerald-700"
+                        >
+                          <FiEdit2 size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
-      {/* Add Stock Modal */}
       {showAddStockModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4">
@@ -289,8 +303,12 @@ export default function InventoryManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Product
                 </label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                  <option>Select Product</option>
+                <select
+                  value={selectedProduct ?? ""}
+                  onChange={(e) => setSelectedProduct(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">Select Product</option>
                   {inventoryData.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.productName}

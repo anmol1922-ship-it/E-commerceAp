@@ -5,34 +5,35 @@ import { clearCart } from "../store/slices/cartSlice";
 import toast from "react-hot-toast";
 import api from "../api/axios";
 
-const VASAI_PINCODES = [
-  "401201",
-  "401202",
-  "401203",
-  "401204",
-  "401205",
-  "401207",
-  "401208",
-  "401209",
-  "401210",
-  "401301",
-  "401302",
-  "401303",
-  "401304",
-  "401305",
-];
-const DELIVERY_SLOTS = [
-  "9 AM – 12 PM",
-  "12 PM – 3 PM",
-  "3 PM – 6 PM",
-  "6 PM – 9 PM",
-];
-const GST_RATE = 0.18;
-const FREE_DELIVERY_THRESHOLD = 500;
-const DELIVERY_CHARGE = 30;
-
 export default function Checkout() {
   const dispatch = useDispatch();
+  const { settings } = useSelector((state: RootState) => state.settings);
+
+  const VASAI_PINCODES = settings?.servicablePincodes ?? [
+    "401201",
+    "401202",
+    "401203",
+    "401204",
+    "401205",
+    "401207",
+    "401208",
+    "401209",
+    "401210",
+    "401301",
+    "401302",
+    "401303",
+    "401304",
+    "401305",
+  ];
+  const DELIVERY_SLOTS = settings?.deliverySlots ?? [
+    "9 AM – 12 PM",
+    "12 PM – 3 PM",
+    "3 PM – 6 PM",
+    "6 PM – 9 PM",
+  ];
+  const GST_RATE = settings?.gstRate ?? 0.18;
+  const FREE_DELIVERY_THRESHOLD = settings?.freeDeliveryThreshold ?? 500;
+  const DELIVERY_CHARGE = settings?.deliveryCharge ?? 30;
   const { items } = useSelector((state: RootState) => state.cart);
   const { user } = useSelector((state: RootState) => state.auth);
 

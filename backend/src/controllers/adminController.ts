@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
 import {
   startOfDay,
   endOfDay,
@@ -7,8 +6,7 @@ import {
   startOfMonth,
   endOfMonth,
 } from "date-fns";
-
-const prisma = new PrismaClient();
+import { prisma } from "../config/db";
 
 declare global {
   namespace Express {
@@ -96,10 +94,59 @@ export const getDashboardKPIs = async (req: Request, res: Response) => {
       where: { stock: { lte: 20 } },
     });
 
+    // Calculate actual profit from today's orders using cost prices
+    const todayOrdersWithItems = await prisma.order.findMany({
+      where: {
+        createdAt: { gte: dayStart, lte: dayEnd },
+        paymentStatus: "paid",
+      },
+      include: {
+        items: { include: { product: { select: { costPrice: true } } } },
+      },
+    });
+    const todayCost = todayOrdersWithItems.reduce((sum, o) => {
+      return (
+        sum +
+        o.items.reduce((itemSum, item) => {
+          return itemSum + (item.product?.costPrice || 0) * item.quantity;
+        }, 0)
+      );
+    }, 0);
+    const profitTodayAmount = ordersTodayAmount - todayCost;
+
     // Pending orders
     const pendingOrders = await prisma.order.count({
       where: { status: { in: ["placed", "confirmed"] } },
     });
+
+    // Pending orders yesterday for trend
+    const pendingYesterday = await prisma.order.count({
+      where: {
+        status: { in: ["placed", "confirmed"] },
+        createdAt: { lte: endOfDay(yesterday) },
+      },
+    });
+    const pendingTrend =
+      pendingYesterday > 0
+        ? Math.round(
+            ((pendingOrders - pendingYesterday) / pendingYesterday) * 100,
+          )
+        : 0;
+
+    // Active customers trend (compare last 30d vs previous 30d)
+    const sixtyDaysAgo = subMonths(today, 2);
+    const prevActiveCustomers = await prisma.order.count({
+      where: {
+        createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo },
+      },
+    });
+    const activeCustomersTrend =
+      prevActiveCustomers > 0
+        ? Math.round(
+            ((activeCustomers - prevActiveCustomers) / prevActiveCustomers) *
+              100,
+          )
+        : 0;
 
     // Jar returns pending
     const pendingReturns = await prisma.jarReturn.count({
@@ -114,17 +161,17 @@ export const getDashboardKPIs = async (req: Request, res: Response) => {
         ordersTodayTrend: ordersTrend,
         revenueTodayAmount: Math.round(ordersTodayAmount),
         revenueTodayTrend: ordersTrend,
-        profitTodayAmount: Math.round(ordersTodayAmount * 0.35),
+        profitTodayAmount: Math.round(profitTodayAmount),
         profitTodayTrend: ordersTrend,
         activeCustomersCount: activeCustomers,
-        activeCustomersTrend: 12,
+        activeCustomersTrend,
         stockValueTotal: Math.round(stockValue),
-        stockValueTrend: -2,
+        stockValueTrend: 0,
         lowStockItemsCount: lowStockItems,
         pendingDeliveriesCount: pendingOrders,
-        pendingDeliveriesTrend: -1,
+        pendingDeliveriesTrend: pendingTrend,
         pendingJarReturnsCount: pendingReturns,
-        pendingJarReturnsTrend: 3,
+        pendingJarReturnsTrend: 0,
       },
     });
   } catch (error) {
@@ -156,7 +203,30 @@ export const getMonthlyStats = async (req: Request, res: Response) => {
       (sum, o) => sum + o.totalAmount,
       0,
     );
-    const profitThisMonth = Math.round(revenueThisMonth * 0.32);
+
+    // Calculate actual profit from cost prices
+    const monthOrdersWithItems = await prisma.order.findMany({
+      where: {
+        createdAt: { gte: monthStart, lte: monthEnd },
+        paymentStatus: "paid",
+      },
+      include: {
+        items: { include: { product: { select: { costPrice: true } } } },
+      },
+    });
+    const monthCost = monthOrdersWithItems.reduce((sum, o) => {
+      return (
+        sum +
+        o.items.reduce((itemSum, item) => {
+          return itemSum + (item.product?.costPrice || 0) * item.quantity;
+        }, 0)
+      );
+    }, 0);
+    const profitThisMonth = revenueThisMonth - monthCost;
+    const profitMargin =
+      revenueThisMonth > 0
+        ? Math.round((profitThisMonth / revenueThisMonth) * 100)
+        : 0;
 
     const yearStart = new Date(today.getFullYear(), 0, 1);
     const yearOrders = await prisma.order.findMany({
@@ -164,23 +234,50 @@ export const getMonthlyStats = async (req: Request, res: Response) => {
         createdAt: { gte: yearStart, lte: monthEnd },
         paymentStatus: "paid",
       },
+      include: {
+        items: { include: { product: { select: { costPrice: true } } } },
+      },
     });
 
     const yearToDateRevenue = yearOrders.reduce(
       (sum, o) => sum + o.totalAmount,
       0,
     );
+    const yearToDateCost = yearOrders.reduce((sum, o) => {
+      return (
+        sum +
+        o.items.reduce((itemSum, item) => {
+          return itemSum + (item.product?.costPrice || 0) * item.quantity;
+        }, 0)
+      );
+    }, 0);
+    const yearToDateProfit = yearToDateRevenue - yearToDateCost;
+
+    // Use last month's revenue as a rough target (can be made configurable via settings)
+    const lastMonthStart = startOfMonth(subMonths(today, 1));
+    const lastMonthEnd = endOfMonth(subMonths(today, 1));
+    const lastMonthOrders = await prisma.order.findMany({
+      where: {
+        createdAt: { gte: lastMonthStart, lte: lastMonthEnd },
+        paymentStatus: "paid",
+      },
+    });
+    const lastMonthRevenue = lastMonthOrders.reduce(
+      (sum, o) => sum + o.totalAmount,
+      0,
+    );
+    const revenueTarget = Math.max(lastMonthRevenue * 1.1, 100000); // 10% growth target
 
     res.json({
       success: true,
       data: {
         revenueThisMonth: Math.round(revenueThisMonth),
-        revenueTarget: 500000,
-        revenueProgress: Math.round((revenueThisMonth / 500000) * 100),
+        revenueTarget: Math.round(revenueTarget),
+        revenueProgress: Math.round((revenueThisMonth / revenueTarget) * 100),
         profitThisMonth: Math.round(profitThisMonth),
-        profitMargin: 32,
+        profitMargin,
         yearToDateRevenue: Math.round(yearToDateRevenue),
-        yearToDateProfit: Math.round(yearToDateRevenue * 0.32),
+        yearToDateProfit: Math.round(yearToDateProfit),
         averageOrderValue:
           yearOrders.length > 0
             ? Math.round(yearToDateRevenue / yearOrders.length)

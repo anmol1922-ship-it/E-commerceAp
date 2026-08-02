@@ -8,13 +8,14 @@ import {
 import { Link } from "react-router-dom";
 import { FiTrash2, FiMinus, FiPlus } from "react-icons/fi";
 
-const GST_RATE = 0.18;
-const FREE_DELIVERY_THRESHOLD = 500;
-const DELIVERY_CHARGE = 30;
-
 export default function Cart() {
   const dispatch = useDispatch();
   const { items } = useSelector((state: RootState) => state.cart);
+  const { settings } = useSelector((state: RootState) => state.settings);
+
+  const GST_RATE = settings?.gstRate ?? 0.18;
+  const FREE_DELIVERY_THRESHOLD = settings?.freeDeliveryThreshold ?? 500;
+  const DELIVERY_CHARGE = settings?.deliveryCharge ?? 30;
 
   const subtotal = items.reduce(
     (sum, i) => sum + i.product.price * i.quantity,

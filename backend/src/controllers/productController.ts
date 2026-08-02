@@ -89,9 +89,54 @@ export const getProductById = async (req: Request, res: Response) => {
 // Admin: create product
 export const createProduct = async (req: Request, res: Response) => {
   try {
-    const product = await prisma.product.create({ data: req.body });
+    const { name, slug, description, price, mrp, category, size } = req.body;
+    if (
+      !name ||
+      !slug ||
+      !description ||
+      price == null ||
+      mrp == null ||
+      !category ||
+      !size
+    ) {
+      return res.status(400).json({
+        message:
+          "Required fields: name, slug, description, price, mrp, category, size",
+      });
+    }
+
+    const allowedFields = [
+      "name",
+      "slug",
+      "description",
+      "price",
+      "mrp",
+      "category",
+      "size",
+      "bottlesPerCase",
+      "imageUrl",
+      "images",
+      "stock",
+      "isAvailable",
+      "costPrice",
+      "reorderLevel",
+      "supplierId",
+    ];
+    const sanitized: Record<string, any> = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        sanitized[field] = req.body[field];
+      }
+    }
+
+    const product = await prisma.product.create({ data: sanitized as any });
     res.status(201).json({ success: true, product });
   } catch (error: any) {
+    if (error.code === "P2002") {
+      return res
+        .status(400)
+        .json({ message: "Product with this slug already exists" });
+    }
     res.status(500).json({ message: error.message });
   }
 };
@@ -99,14 +144,44 @@ export const createProduct = async (req: Request, res: Response) => {
 // Admin: update product
 export const updateProduct = async (req: Request, res: Response) => {
   try {
+    const allowedFields = [
+      "name",
+      "slug",
+      "description",
+      "price",
+      "mrp",
+      "category",
+      "size",
+      "bottlesPerCase",
+      "imageUrl",
+      "images",
+      "stock",
+      "isAvailable",
+      "costPrice",
+      "reorderLevel",
+      "supplierId",
+      "popularity",
+    ];
+    const sanitized: Record<string, any> = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        sanitized[field] = req.body[field];
+      }
+    }
+
     const product = await prisma.product.update({
       where: { id: req.params.id },
-      data: req.body,
+      data: sanitized,
     });
     res.json({ success: true, product });
   } catch (error: any) {
     if (error.code === "P2025") {
       return res.status(404).json({ message: "Product not found" });
+    }
+    if (error.code === "P2002") {
+      return res
+        .status(400)
+        .json({ message: "Product with this slug already exists" });
     }
     res.status(500).json({ message: error.message });
   }

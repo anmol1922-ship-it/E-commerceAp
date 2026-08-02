@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate } from "../middleware/auth";
+import { authenticate, isAdmin } from "../middleware/auth";
 import {
   getDashboardKPIs,
   getMonthlyStats,
@@ -13,16 +13,12 @@ import {
   getJarReturns,
   recordJarReturn,
   getJarReturnSummary,
+  exportOrders,
 } from "../controllers/adminController";
 
 const router = Router();
 
-// Middleware to verify admin access
-const verifyAdmin = (req: any, res: any, next: any) => {
-  // Verify user is admin in the request (should be set by auth middleware)
-  // For now, we'll just continue - authentication is checked by authenticate
-  next();
-};
+const verifyAdmin = isAdmin;
 
 // ============ DASHBOARD ROUTES ============
 router.get("/dashboard/kpis", authenticate, verifyAdmin, getDashboardKPIs);
@@ -73,5 +69,8 @@ router.get(
   verifyAdmin,
   getJarReturnSummary,
 );
+
+// ============ EXPORT ROUTES ============
+router.get("/export/orders", authenticate, verifyAdmin, exportOrders);
 
 export default router;

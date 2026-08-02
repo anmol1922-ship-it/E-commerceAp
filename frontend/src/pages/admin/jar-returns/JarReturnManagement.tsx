@@ -1,5 +1,14 @@
-import React, { useState } from "react";
-import { FiPlus, FiSearch, FiAlertCircle, FiCheckCircle } from "react-icons/fi";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  FiPlus,
+  FiSearch,
+  FiAlertCircle,
+  FiCheckCircle,
+  FiLoader,
+  FiAlertTriangle,
+} from "react-icons/fi";
+import toast from "react-hot-toast";
+import api from "../../../api/axios";
 
 interface JarReturnRecord {
   id: string;
@@ -7,80 +16,114 @@ interface JarReturnRecord {
   jarsIssued: number;
   jarsReturned: number;
   pendingJars: number;
-  depositAmount: number;
-  outstandingDeposit: number;
-  returnStatus: "pending" | "partial" | "complete";
-  lastReturnDate: string;
-  daysOverdue: number;
+  deposit: number;
+  outstanding: number;
+  status: string;
+  lastReturn: string | null;
+}
+
+interface JarReturnSummary {
+  totalRecords: number;
+  totalJarsIssued: number;
+  totalJarsReturned: number;
+  totalDeposit: number;
+  totalOutstanding: number;
+}
+
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
 }
 
 export default function JarReturnManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [jarReturns, setJarReturns] = useState<JarReturnRecord[]>([]);
+  const [summary, setSummary] = useState<JarReturnSummary | null>(null);
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    limit: 20,
+    total: 0,
+    pages: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const jarReturnData: JarReturnRecord[] = [
-    {
-      id: "JR-001",
-      customerName: "Anmol Gupta",
-      jarsIssued: 10,
-      jarsReturned: 8,
-      pendingJars: 2,
-      depositAmount: 1000,
-      outstandingDeposit: 200,
-      returnStatus: "partial",
-      lastReturnDate: "2026-05-28",
-      daysOverdue: 4,
+  // Modal form state
+  const [returnForm, setReturnForm] = useState({
+    jarReturnId: "",
+    quantityReturned: 0,
+    depositRefunded: 0,
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchData = useCallback(
+    async (page = 1) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params: Record<string, string> = {
+          page: page.toString(),
+          limit: "20",
+        };
+        if (filterStatus !== "all") params.status = filterStatus;
+
+        const [returnsRes, summaryRes] = await Promise.all([
+          api.get("/admin/jar-returns", { params }),
+          api.get("/admin/jar-returns/stats"),
+        ]);
+
+        if (returnsRes.data.success) {
+          setJarReturns(returnsRes.data.data);
+          setPagination(returnsRes.data.pagination);
+        }
+        if (summaryRes.data.success) {
+          setSummary(summaryRes.data.data);
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.message || "Failed to load jar returns");
+      } finally {
+        setLoading(false);
+      }
     },
-    {
-      id: "JR-002",
-      customerName: "Priya Singh",
-      jarsIssued: 6,
-      jarsReturned: 6,
-      pendingJars: 0,
-      depositAmount: 600,
-      outstandingDeposit: 0,
-      returnStatus: "complete",
-      lastReturnDate: "2026-05-31",
-      daysOverdue: 0,
-    },
-    {
-      id: "JR-003",
-      customerName: "Rajesh Kumar",
-      jarsIssued: 8,
-      jarsReturned: 3,
-      pendingJars: 5,
-      depositAmount: 800,
-      outstandingDeposit: 500,
-      returnStatus: "pending",
-      lastReturnDate: "2026-05-20",
-      daysOverdue: 12,
-    },
-    {
-      id: "JR-004",
-      customerName: "Neha Sharma",
-      jarsIssued: 5,
-      jarsReturned: 4,
-      pendingJars: 1,
-      depositAmount: 500,
-      outstandingDeposit: 100,
-      returnStatus: "partial",
-      lastReturnDate: "2026-05-30",
-      daysOverdue: 2,
-    },
-    {
-      id: "JR-005",
-      customerName: "Vikram Patel",
-      jarsIssued: 12,
-      jarsReturned: 5,
-      pendingJars: 7,
-      depositAmount: 1200,
-      outstandingDeposit: 700,
-      returnStatus: "pending",
-      lastReturnDate: "2026-05-15",
-      daysOverdue: 17,
-    },
-  ];
+    [filterStatus],
+  );
+
+  useEffect(() => {
+    fetchData(1);
+  }, [fetchData]);
+
+  const handleRecordReturn = async () => {
+    if (!returnForm.jarReturnId || returnForm.quantityReturned <= 0) {
+      toast.error("Please select a record and enter quantity");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data } = await api.post("/admin/jar-returns/record-return", {
+        jarReturnId: returnForm.jarReturnId,
+        quantityReturned: returnForm.quantityReturned,
+        depositRefunded: returnForm.depositRefunded,
+      });
+      if (data.success) {
+        toast.success("Jar return recorded successfully");
+        setShowAddModal(false);
+        setReturnForm({
+          jarReturnId: "",
+          quantityReturned: 0,
+          depositRefunded: 0,
+        });
+        fetchData(pagination.page);
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to record return");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -95,34 +138,35 @@ export default function JarReturnManagement() {
     }
   };
 
-  const filteredData = jarReturnData.filter((item) => {
-    const matchesSearch = item.customerName
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesFilter =
-      filterStatus === "all" || item.returnStatus === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
+  const filteredData = searchTerm
+    ? jarReturns.filter((item) =>
+        item.customerName.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
+    : jarReturns;
 
-  const stats = {
-    totalJarsIssued: jarReturnData.reduce(
-      (sum, item) => sum + item.jarsIssued,
-      0,
-    ),
-    totalJarsReturned: jarReturnData.reduce(
-      (sum, item) => sum + item.jarsReturned,
-      0,
-    ),
-    totalPendingJars: jarReturnData.reduce(
-      (sum, item) => sum + item.pendingJars,
-      0,
-    ),
-    totalOutstandingDeposit: jarReturnData.reduce(
-      (sum, item) => sum + item.outstandingDeposit,
-      0,
-    ),
-    overdueCases: jarReturnData.filter((item) => item.daysOverdue > 0).length,
-  };
+  if (loading && jarReturns.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <FiLoader className="w-8 h-8 animate-spin text-emerald-600" />
+        <span className="ml-3 text-gray-500">Loading jar returns...</span>
+      </div>
+    );
+  }
+
+  if (error && jarReturns.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-center">
+        <FiAlertTriangle className="w-12 h-12 text-red-400 mb-4" />
+        <p className="text-red-600 font-medium">{error}</p>
+        <button
+          onClick={() => fetchData(1)}
+          className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -146,52 +190,45 @@ export default function JarReturnManagement() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
-          <p className="text-sm text-blue-700 font-medium">Total Issued</p>
-          <p className="text-2xl font-bold text-blue-900 mt-1">
-            {stats.totalJarsIssued}
-          </p>
+      {summary && (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
+            <p className="text-sm text-blue-700 font-medium">Total Issued</p>
+            <p className="text-2xl font-bold text-blue-900 mt-1">
+              {summary.totalJarsIssued}
+            </p>
+          </div>
+          <div className="bg-green-50 rounded-lg border border-green-200 p-4">
+            <p className="text-sm text-green-700 font-medium">Total Returned</p>
+            <p className="text-2xl font-bold text-green-900 mt-1">
+              {summary.totalJarsReturned}
+            </p>
+          </div>
+          <div className="bg-red-50 rounded-lg border border-red-200 p-4">
+            <p className="text-sm text-red-700 font-medium">Pending Jars</p>
+            <p className="text-2xl font-bold text-red-900 mt-1">
+              {summary.totalJarsIssued - summary.totalJarsReturned}
+            </p>
+          </div>
+          <div className="bg-purple-50 rounded-lg border border-purple-200 p-4">
+            <p className="text-sm text-purple-700 font-medium">Total Deposit</p>
+            <p className="text-2xl font-bold text-purple-900 mt-1">
+              ₹{summary.totalDeposit}
+            </p>
+          </div>
+          <div className="bg-orange-50 rounded-lg border border-orange-200 p-4">
+            <p className="text-sm text-orange-700 font-medium">Outstanding</p>
+            <p className="text-2xl font-bold text-orange-900 mt-1">
+              ₹{summary.totalOutstanding}
+            </p>
+          </div>
         </div>
-
-        <div className="bg-green-50 rounded-lg border border-green-200 p-4">
-          <p className="text-sm text-green-700 font-medium">Total Returned</p>
-          <p className="text-2xl font-bold text-green-900 mt-1">
-            {stats.totalJarsReturned}
-          </p>
-        </div>
-
-        <div className="bg-red-50 rounded-lg border border-red-200 p-4">
-          <p className="text-sm text-red-700 font-medium">Pending Jars</p>
-          <p className="text-2xl font-bold text-red-900 mt-1">
-            {stats.totalPendingJars}
-          </p>
-        </div>
-
-        <div className="bg-purple-50 rounded-lg border border-purple-200 p-4">
-          <p className="text-sm text-purple-700 font-medium">
-            Outstanding Deposit
-          </p>
-          <p className="text-2xl font-bold text-purple-900 mt-1">
-            ₹{stats.totalOutstandingDeposit}
-          </p>
-        </div>
-
-        <div className="bg-orange-50 rounded-lg border border-orange-200 p-4">
-          <p className="text-sm text-orange-700 font-medium flex items-center gap-1">
-            <FiAlertCircle size={16} />
-            Overdue Cases
-          </p>
-          <p className="text-2xl font-bold text-orange-900 mt-1">
-            {stats.overdueCases}
-          </p>
-        </div>
-      </div>
+      )}
 
       {/* Filters */}
       <div className="flex gap-4">
         <div className="flex-1 relative">
-          <FiSearch className="absolute left-3 top-3 text-gray-400 size-5" />
+          <FiSearch className="absolute left-3 top-3 text-gray-400" size={20} />
           <input
             type="text"
             placeholder="Search by customer name..."
@@ -200,7 +237,6 @@ export default function JarReturnManagement() {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
-
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
@@ -241,7 +277,7 @@ export default function JarReturnManagement() {
                   Status
                 </th>
                 <th className="text-center py-3 px-6 font-medium text-gray-700">
-                  Days Overdue
+                  Last Return
                 </th>
               </tr>
             </thead>
@@ -264,98 +300,136 @@ export default function JarReturnManagement() {
                     {item.pendingJars}
                   </td>
                   <td className="py-3 px-6 text-right text-gray-600">
-                    ₹{item.depositAmount}
+                    ₹{item.deposit}
                   </td>
                   <td className="py-3 px-6 text-right font-medium text-gray-900">
-                    ₹{item.outstandingDeposit}
+                    ₹{item.outstanding}
                   </td>
                   <td className="py-3 px-6 text-center">
                     <span
-                      className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                        item.returnStatus,
-                      )}`}
+                      className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}
                     >
-                      {item.returnStatus === "complete"
+                      {item.status === "complete"
                         ? "✓ Complete"
-                        : item.returnStatus === "partial"
+                        : item.status === "partial"
                           ? "⚠ Partial"
                           : "⏳ Pending"}
                     </span>
                   </td>
-                  <td className="py-3 px-6 text-center">
-                    {item.daysOverdue > 0 ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
-                        <FiAlertCircle size={14} />
-                        {item.daysOverdue} days
-                      </span>
-                    ) : (
-                      <span className="text-xs text-green-600">On time</span>
-                    )}
+                  <td className="py-3 px-6 text-center text-gray-600 text-xs">
+                    {item.lastReturn
+                      ? new Date(item.lastReturn).toLocaleDateString("en-IN")
+                      : "-"}
                   </td>
                 </tr>
               ))}
+              {filteredData.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-gray-500">
+                    No jar return records found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Add Return Modal */}
+      {/* Pagination */}
+      {pagination.pages > 1 && (
+        <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-4">
+          <p className="text-sm text-gray-600">
+            Page {pagination.page} of {pagination.pages} ({pagination.total}{" "}
+            total)
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => fetchData(pagination.page - 1)}
+              disabled={pagination.page <= 1}
+              className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => fetchData(pagination.page + 1)}
+              disabled={pagination.page >= pagination.pages}
+              className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Record Return Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4">
             <h2 className="text-xl font-bold text-gray-900">
               Record Jar Return
             </h2>
-
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Customer
+                  Customer Record
                 </label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                  <option>Select Customer</option>
-                  {jarReturnData.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.customerName}
-                    </option>
-                  ))}
+                <select
+                  value={returnForm.jarReturnId}
+                  onChange={(e) =>
+                    setReturnForm({
+                      ...returnForm,
+                      jarReturnId: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">Select Customer</option>
+                  {jarReturns
+                    .filter((item) => item.status !== "complete")
+                    .map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.customerName} (Pending: {item.pendingJars})
+                      </option>
+                    ))}
                 </select>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Jars Returned
                 </label>
                 <input
                   type="number"
+                  min="1"
+                  value={returnForm.quantityReturned || ""}
+                  onChange={(e) =>
+                    setReturnForm({
+                      ...returnForm,
+                      quantityReturned: parseInt(e.target.value) || 0,
+                    })
+                  }
                   placeholder="e.g., 5"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Deposit Refunded
+                  Deposit Refunded (₹)
                 </label>
                 <input
                   type="number"
+                  min="0"
+                  value={returnForm.depositRefunded || ""}
+                  onChange={(e) =>
+                    setReturnForm({
+                      ...returnForm,
+                      depositRefunded: parseFloat(e.target.value) || 0,
+                    })
+                  }
                   placeholder="e.g., 500"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
-                </label>
-                <textarea
-                  placeholder="Add any notes..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
             </div>
-
             <div className="flex gap-3 pt-4">
               <button
                 onClick={() => setShowAddModal(false)}
@@ -363,8 +437,12 @@ export default function JarReturnManagement() {
               >
                 Cancel
               </button>
-              <button className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition">
-                Record Return
+              <button
+                onClick={handleRecordReturn}
+                disabled={submitting}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition disabled:opacity-50"
+              >
+                {submitting ? "Saving..." : "Record Return"}
               </button>
             </div>
           </div>
