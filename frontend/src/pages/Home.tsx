@@ -122,7 +122,7 @@ export default function Home() {
       </section>
 
       {/* Promo */}
-      <section className="bg-emerald-50 py-12">
+      {/* <section className="bg-emerald-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl font-bold text-gray-900">🎉 Special Offer</h2>
           <p className="text-gray-600 mt-2">
@@ -130,7 +130,7 @@ export default function Home() {
             orders above ₹500.
           </p>
         </div>
-      </section>
+      </section> */}
 
       {/* Testimonials */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">

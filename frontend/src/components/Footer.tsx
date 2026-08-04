@@ -6,7 +6,9 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Brand */}
         <div>
-          <h3 className="text-white text-lg font-bold mb-3">Bisleri Vasai</h3>
+          <h3 className="text-white text-lg font-bold mb-3">
+            Tayal Distributors
+          </h3>
           <p className="text-sm leading-relaxed">
             Premium mineral water delivery for homes and offices in Vasai,
             Maharashtra.
@@ -40,17 +42,18 @@ export default function Footer() {
         <div>
           <h4 className="text-white font-semibold mb-3">Contact</h4>
           <ul className="space-y-2 text-sm">
-            <li>Phone: +91 98765 43210</li>
-            <li>Email: order@bisleri-vasai.com</li>
-            <li>Vasai West, Maharashtra 401202</li>
+            <li>Phone: +917709912600/+919766306706</li>
+            <li>
+              Address: Tayal Distributors, Shop No-35, Kingston Tower,Kaul
+              Heritage Society, Vasai West, Maharashtra 401202
+            </li>
           </ul>
         </div>
         {/* Delivery */}
         <div>
           <h4 className="text-white font-semibold mb-3">Delivery Info</h4>
           <p className="text-sm leading-relaxed">
-            Free delivery on orders above ₹500. Same-day delivery available for
-            early orders in Vasai area.
+            Same-day delivery available for early orders in Vasai area.
           </p>
         </div>
       </div>

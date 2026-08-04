@@ -13,9 +13,9 @@ export default function Cart() {
   const { items } = useSelector((state: RootState) => state.cart);
   const { settings } = useSelector((state: RootState) => state.settings);
 
-  const GST_RATE = settings?.gstRate ?? 0.18;
-  const FREE_DELIVERY_THRESHOLD = settings?.freeDeliveryThreshold ?? 500;
-  const DELIVERY_CHARGE = settings?.deliveryCharge ?? 30;
+  const GST_RATE = settings?.gstRate ?? 0.05;
+  const FREE_DELIVERY_THRESHOLD = settings?.freeDeliveryThreshold ?? 10000;
+  const DELIVERY_CHARGE = settings?.deliveryCharge ?? 10;
 
   const subtotal = items.reduce(
     (sum, i) => sum + i.product.price * i.quantity,
@@ -133,7 +133,7 @@ export default function Cart() {
               <span>₹{subtotal}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">GST (18%)</span>
+              <span className="text-gray-500">GST (5%)</span>
               <span>₹{gst}</span>
             </div>
             <div className="flex justify-between">

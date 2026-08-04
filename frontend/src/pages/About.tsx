@@ -39,18 +39,14 @@ export default function About() {
             Delivery in Vasai
           </h2>
           <p className="text-gray-600 leading-relaxed">
-            We provide same-day delivery across Vasai West, Vasai East,
-            Nalasopara, and surrounding areas (pincodes 401201–401305). Our
-            delivery fleet ensures your water reaches you fresh and on time.
+            We provide same-day delivery across Vasai West, Vasai East, and
+            surrounding areas (pincodes 401201–401305). Our delivery fleet
+            ensures your water reaches you fresh and on time.
           </p>
           <div className="grid sm:grid-cols-3 gap-4 mt-4">
             <div className="bg-emerald-50 rounded-xl p-4 text-center">
               <p className="text-2xl font-bold text-emerald-700">4</p>
               <p className="text-sm text-gray-600">Delivery Slots Daily</p>
-            </div>
-            <div className="bg-emerald-50 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-emerald-700">₹500+</p>
-              <p className="text-sm text-gray-600">Free Delivery</p>
             </div>
             <div className="bg-emerald-50 rounded-xl p-4 text-center">
               <p className="text-2xl font-bold text-emerald-700">COD</p>
@@ -64,12 +60,12 @@ export default function About() {
             Contact Us
           </h2>
           <div className="text-gray-600 space-y-2">
-            <p>📞 Phone: +91 9766306706</p>
-            <p>📧 Email: orders@bisleri-vasai.com</p>
+            <p>📞 Phone: +917709912600/+919766306706 </p>
             <p>
-              📍 Address: Bisleri Water Depot, Vasai West, Maharashtra 401202
+              📍 Address: Tayal Distributors, Shop No-35, Kingston Tower,Kaul
+              Heritage Society, Vasai West, Maharashtra 401202
             </p>
-            <p>🕐 Timings: Mon–Sat, 8 AM – 9 PM</p>
+            <p>🕐 Timings: Mon–Sun, 9 AM – 9 PM</p>
           </div>
         </section>
       </div>

@@ -10,13 +10,13 @@ const products = [
     slug: "bisleri-20l-jar",
     description:
       "Premium 20-litre water jar for home and office. Enough for a week of hydration.",
-    price: 100.0,
-    mrp: 120.0,
+    price: 90.0,
+    mrp: 100.0,
     category: "jar" as const,
     size: "20L",
     bottlesPerCase: 1,
-    imageUrl: "/images/bisleri/bisleri-20l.svg",
-    stock: 200,
+    imageUrl: "/images/bisleri/bisleri-20l.png",
+    stock: 500,
     isAvailable: true,
     popularity: 95,
   },
@@ -26,12 +26,12 @@ const products = [
     description:
       "Convenient 10-litre water jar for compact kitchens and smaller households.",
     price: 125.0,
-    mrp: 140.0,
+    mrp: 130.0,
     category: "jar" as const,
     size: "10L",
     bottlesPerCase: 1,
-    imageUrl: "/images/bisleri/bisleri-10l.svg",
-    stock: 150,
+    imageUrl: "/images/bisleri/bisleri-10l.png",
+    stock: 250,
     isAvailable: true,
     popularity: 80,
   },
@@ -41,11 +41,11 @@ const products = [
     description:
       "Portable 5-litre jar – perfect for travel and small gatherings.",
     price: 75.0,
-    mrp: 85.0,
+    mrp: 80.0,
     category: "jar" as const,
     size: "5L",
     bottlesPerCase: 1,
-    imageUrl: "/images/bisleri/bisleri-5l.svg",
+    imageUrl: "/images/bisleri/bisleri-5L.png",
     stock: 250,
     isAvailable: true,
     popularity: 70,
@@ -55,13 +55,13 @@ const products = [
     slug: "bisleri-2l-case",
     description:
       "A case of nine 2-litre bottles. Great for families and offices.",
-    price: 180.0,
-    mrp: 200.0,
+    price: 250.0,
+    mrp: 270.0,
     category: "case" as const,
     size: "2L",
     bottlesPerCase: 9,
-    imageUrl: "/images/bisleri/bisleri-2l.svg",
-    stock: 100,
+    imageUrl: "/images/bisleri/bisleri-2L.png",
+    stock: 150,
     isAvailable: true,
     popularity: 60,
   },
@@ -69,13 +69,13 @@ const products = [
     name: "Bisleri 1L Case (12 Bottles)",
     slug: "bisleri-1l-case",
     description: "Twelve 1-litre bottles – ideal for daily use and gatherings.",
-    price: 240.0,
-    mrp: 264.0,
+    price: 200.0,
+    mrp: 240.0,
     category: "case" as const,
     size: "1L",
     bottlesPerCase: 12,
-    imageUrl: "/images/bisleri/bisleri-1l.svg",
-    stock: 120,
+    imageUrl: "/images/bisleri/bisleri-1l.jpg",
+    stock: 400,
     isAvailable: true,
     popularity: 85,
   },
@@ -84,13 +84,13 @@ const products = [
     slug: "bisleri-500ml-case",
     description:
       "A case of twenty-four 500ml bottles. Perfect for events and parties.",
-    price: 240.0,
-    mrp: 264.0,
+    price: 200.0,
+    mrp: 240.0,
     category: "case" as const,
     size: "500ml",
     bottlesPerCase: 24,
-    imageUrl: "/images/bisleri/bisleri-500ml-box.svg",
-    stock: 100,
+    imageUrl: "/images/bisleri/bisleri-500ml.jpg",
+    stock: 300,
     isAvailable: true,
     popularity: 75,
   },
@@ -99,13 +99,13 @@ const products = [
     slug: "bisleri-250ml-case",
     description:
       "Forty-eight compact 250ml bottles – perfect for meetings and small events.",
-    price: 290.0,
-    mrp: 320.0,
+    price: 280.0,
+    mrp: 280.0,
     category: "case" as const,
     size: "250ml",
     bottlesPerCase: 48,
-    imageUrl: "/images/bisleri/bisleri-250ml.svg",
-    stock: 80,
+    imageUrl: "/images/bisleri/bisleri-250ml.jpg",
+    stock: 50,
     isAvailable: true,
     popularity: 50,
   },
@@ -114,15 +114,75 @@ const products = [
     slug: "bisleri-200ml-case",
     description:
       "Forty-eight mini 200ml bottles. Compact, perfect for trains & bus journeys.",
-    price: 260.0,
-    mrp: 288.0,
+    price: 240.0,
+    mrp: 240.0,
     category: "case" as const,
     size: "200ml",
     bottlesPerCase: 48,
-    imageUrl: "/images/bisleri/bisleri-200ml.svg",
-    stock: 60,
+    imageUrl: "/images/bisleri/bisleri-200ml.jpg",
+    stock: 300,
     isAvailable: true,
     popularity: 40,
+  },
+  {
+    name: "Bisleri Soda 750ml Case (12 Bottles)",
+    slug: "bisleri-soda-750ml-case",
+    description:
+      "Refreshing Bisleri Soda 750ml bottles. Ideal for restaurants, parties, and everyday use.",
+    price: 150.0,
+    mrp: 240.0,
+    category: "case" as const,
+    size: "750ml",
+    bottlesPerCase: 12,
+    imageUrl: "/images/bisleri/bisleri-soda-750ml.jpg",
+    stock: 40,
+    isAvailable: true,
+    popularity: 35,
+  },
+  {
+    name: "Bisleri Soda 300ml Case (24 Bottles)",
+    slug: "bisleri-soda-300ml-case",
+    description:
+      "Compact 300ml Bisleri Soda bottles. Perfect for individual servings and events.",
+    price: 200.0,
+    mrp: 240.0,
+    category: "case" as const,
+    size: "300ml",
+    bottlesPerCase: 24,
+    imageUrl: "/images/bisleri/bisleri-soda-300ml.jpg",
+    stock: 30,
+    isAvailable: true,
+    popularity: 30,
+  },
+  {
+    name: "Bisleri Pop 160ml Case (24 Bottles)",
+    slug: "bisleri-pop-160ml-case",
+    description:
+      "Bisleri Pop 160ml soft drink bottles. Great for parties and on-the-go refreshment.",
+    price: 200.0,
+    mrp: 240.0,
+    category: "case" as const,
+    size: "160ml",
+    bottlesPerCase: 24,
+    imageUrl: "/images/bisleri/bisleri-pop-160ml.jpg",
+    stock: 30,
+    isAvailable: true,
+    popularity: 25,
+  },
+  {
+    name: "Bisleri Limonata 160ml Case (24 Bottles)",
+    slug: "bisleri-limonata-160ml-case",
+    description:
+      "Refreshing Bisleri Limonata 160ml bottles with a tangy lemon flavor. Perfect for every occasion.",
+    price: 200.0,
+    mrp: 240.0,
+    category: "case" as const,
+    size: "160ml",
+    bottlesPerCase: 24,
+    imageUrl: "/images/bisleri/bisleri-limonata-160ml.jpg",
+    stock: 30,
+    isAvailable: true,
+    popularity: 25,
   },
 ];
 
@@ -131,13 +191,13 @@ const seed = async () => {
     console.log("🌱 Starting seed...");
 
     // Delete existing data
-    await prisma.cartItem.deleteMany({});
-    await prisma.cart.deleteMany({});
-    await prisma.orderItem.deleteMany({});
-    await prisma.order.deleteMany({});
-    await prisma.product.deleteMany({});
-    await prisma.address.deleteMany({});
-    await prisma.user.deleteMany({});
+    // await prisma.cartItem.deleteMany({});
+    // await prisma.cart.deleteMany({});
+    // await prisma.orderItem.deleteMany({});
+    // await prisma.order.deleteMany({});
+    // await prisma.product.deleteMany({});
+    // await prisma.address.deleteMany({});
+    // await prisma.user.deleteMany({});
 
     // Seed products
     await prisma.product.createMany({

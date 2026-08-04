@@ -278,7 +278,7 @@ export default function Checkout() {
               <span>₹{subtotal}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">GST (18%)</span>
+              <span className="text-gray-500">GST (5%)</span>
               <span>₹{gst}</span>
             </div>
             <div className="flex justify-between">
