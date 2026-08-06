@@ -14,11 +14,11 @@ const razorpay = new Razorpay({
 const SETTINGS_ID = "app_settings";
 
 const getBusinessConfig = async () => {
-  const settings = await prisma.appSettings.findUnique({
+  const settings = await (prisma as any).appSettings?.findUnique?.({
     where: { id: SETTINGS_ID },
   });
   return {
-    gstRate: settings?.gstRate ?? 0.18,
+    gstRate: settings?.gstRate ?? 0.05,
     freeDeliveryThreshold: settings?.freeDeliveryThreshold ?? 500,
     deliveryCharge: settings?.deliveryCharge ?? 30,
   };
@@ -26,6 +26,10 @@ const getBusinessConfig = async () => {
 
 export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
+    console.log("Received createOrder request:", {
+      userId: req.user?.id,
+      body: req.body,
+    });
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -50,16 +54,32 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "Cart is empty" });
     }
 
+    const resolveProduct = async (productRef: string) => {
+      console.log("Resolving product for reference:", productRef);
+      console.log("Searching for product by ID:", prisma.product.findMany());
+      const products = await prisma.product.findMany();
+      console.log(products);
+      const direct = await prisma.product.findUnique({
+        where: { id: productRef },
+      });
+      if (direct) return direct;
+
+      const bySlug = await prisma.product.findFirst({
+        where: { slug: productRef },
+      });
+      if (bySlug) return bySlug;
+
+      return null;
+    };
+
     // Validate products and calculate subtotal
     const items: any[] = [];
     let subtotal = 0;
 
     if (useRequestItems) {
       for (const requestItem of requestItems) {
-        const product = await prisma.product.findUnique({
-          where: { id: requestItem.product },
-        });
-
+        const product = await resolveProduct(requestItem.product);
+        console.log("Validating request items:", requestItem);
         if (!product || !product.isAvailable) {
           return res.status(400).json({
             message: `Product ${product?.name || requestItem.product} is not available`,
@@ -82,6 +102,12 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     } else {
       for (const cartItem of cart.items) {
         const product = cartItem.product;
+        console.log(
+          "Validating cart item:",
+          cartItem,
+          "with productssss:",
+          product,
+        );
         if (!product || !product.isAvailable) {
           return res.status(400).json({
             message: `Product ${product?.name || "unknown"} is not available`,
@@ -173,13 +199,11 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
           message: "Payment gateway not configured. Please try COD.",
         });
       }
-
       razorpayOrder = await razorpay.orders.create({
         amount: Math.round(totalAmount * 100),
         currency: "INR",
         receipt: order.id.toString(),
       });
-
       await prisma.order.update({
         where: { id: order.id },
         data: { razorpayOrderId: razorpayOrder.id },

@@ -191,13 +191,13 @@ const seed = async () => {
     console.log("🌱 Starting seed...");
 
     // Delete existing data
-    // await prisma.cartItem.deleteMany({});
-    // await prisma.cart.deleteMany({});
-    // await prisma.orderItem.deleteMany({});
-    // await prisma.order.deleteMany({});
-    // await prisma.product.deleteMany({});
-    // await prisma.address.deleteMany({});
-    // await prisma.user.deleteMany({});
+    await prisma.cartItem.deleteMany({});
+    await prisma.cart.deleteMany({});
+    await prisma.orderItem.deleteMany({});
+    await prisma.order.deleteMany({});
+    await prisma.product.deleteMany({});
+    await prisma.address.deleteMany({});
+    await prisma.user.deleteMany({});
 
     // Seed products
     await prisma.product.createMany({
