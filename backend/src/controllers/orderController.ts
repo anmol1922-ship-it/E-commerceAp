@@ -19,8 +19,8 @@ const getBusinessConfig = async () => {
   });
   return {
     gstRate: settings?.gstRate ?? 0.05,
-    freeDeliveryThreshold: settings?.freeDeliveryThreshold ?? 500,
-    deliveryCharge: settings?.deliveryCharge ?? 30,
+    freeDeliveryThreshold: settings?.freeDeliveryThreshold ?? 1000,
+    deliveryCharge: settings?.deliveryCharge ?? 10,
   };
 };
 

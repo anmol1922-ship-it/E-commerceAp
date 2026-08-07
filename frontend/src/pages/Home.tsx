@@ -19,12 +19,12 @@ const testimonials = [
   {
     name: "Rajesh Patel",
     text: "Best water quality in Vasai. My office orders 20L jars weekly.",
-    area: "Vasai East",
+    area: "Vasai West",
   },
   {
     name: "Meena Gupta",
     text: "Affordable prices and very polite delivery staff. Strongly recommend!",
-    area: "Nalasopara",
+    area: "Vasai West",
   },
 ];
 
@@ -59,7 +59,7 @@ export default function Home() {
             </h1>
             <p className="mt-4 text-lg text-emerald-100 max-w-lg">
               Order 20L jars, 1L cases, 500ml packs and more — same-day delivery
-              in Vasai. Free delivery above ₹500.
+              in Vasai.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Link

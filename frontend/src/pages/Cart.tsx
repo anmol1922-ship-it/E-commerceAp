@@ -152,11 +152,11 @@ export default function Cart() {
               <span>₹{total}</span>
             </div>
           </div>
-          {subtotal < FREE_DELIVERY_THRESHOLD && (
+          {/* {subtotal < FREE_DELIVERY_THRESHOLD && (
             <p className="text-xs text-gray-500 mt-3">
               Add ₹{FREE_DELIVERY_THRESHOLD - subtotal} more for free delivery
             </p>
-          )}
+          )} */}
           <Link
             to="/checkout"
             className="block w-full mt-5 bg-emerald-600 text-white text-center font-medium py-3 rounded-xl hover:bg-emerald-700 transition"
