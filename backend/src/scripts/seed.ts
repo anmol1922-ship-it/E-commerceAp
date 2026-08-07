@@ -190,25 +190,55 @@ const seed = async () => {
   try {
     console.log("🌱 Starting seed...");
 
-    // Delete existing data
-    await prisma.cartItem.deleteMany({});
-    await prisma.cart.deleteMany({});
-    await prisma.orderItem.deleteMany({});
-    await prisma.order.deleteMany({});
-    await prisma.product.deleteMany({});
-    await prisma.address.deleteMany({});
-    await prisma.user.deleteMany({});
+    // // Delete existing data
+    // await prisma.cartItem.deleteMany({});
+    // await prisma.cart.deleteMany({});
+    // await prisma.orderItem.deleteMany({});
+    // await prisma.order.deleteMany({});
+    // await prisma.product.deleteMany({});
+    // await prisma.address.deleteMany({});
+    // await prisma.user.deleteMany({});
 
     // Seed products
-    await prisma.product.createMany({
-      data: products,
-    });
+    for (const product of products) {
+      await prisma.product.upsert({
+        where: {
+          slug: product.slug,
+        },
+        update: {
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          mrp: product.mrp,
+          category: product.category,
+          size: product.size,
+          bottlesPerCase: product.bottlesPerCase,
+          imageUrl: product.imageUrl,
+          stock: product.stock,
+          isAvailable: product.isAvailable,
+          popularity: product.popularity,
+        },
+        create: product,
+      });
+    }
+
+    console.log(`✅ Seeded ${products.length} products`);
     console.log(`✅ Seeded ${products.length} products`);
 
     // Create admin user
     const hashedPassword = await hashPassword("admin123");
-    const admin = await prisma.user.create({
-      data: {
+
+    const admin = await prisma.user.upsert({
+      where: {
+        email: "admin@bisleri-vasai.com",
+      },
+      update: {
+        name: "Bisleri Admin",
+        phone: "9999999999",
+        password: hashedPassword,
+        role: "admin",
+      },
+      create: {
         name: "Bisleri Admin",
         email: "admin@bisleri-vasai.com",
         phone: "9999999999",
@@ -216,12 +246,22 @@ const seed = async () => {
         role: "admin",
       },
     });
-    console.log("✅ Admin user created (admin@bisleri-vasai.com / admin123)");
 
+    console.log("✅ Admin user ready");
     // Create test customer user
     const customerPassword = await hashPassword("customer123");
-    const customer = await prisma.user.create({
-      data: {
+
+    const customer = await prisma.user.upsert({
+      where: {
+        email: "customer@bisleri-vasai.com",
+      },
+      update: {
+        name: "Test Customer",
+        phone: "8888888888",
+        password: customerPassword,
+        role: "customer",
+      },
+      create: {
         name: "Test Customer",
         email: "customer@bisleri-vasai.com",
         phone: "8888888888",
@@ -229,28 +269,41 @@ const seed = async () => {
         role: "customer",
       },
     });
-
     // Create address for customer
-    await prisma.address.create({
-      data: {
+    const existingAddress = await prisma.address.findFirst({
+      where: {
         userId: customer.id,
-        street: "123 Main Street",
-        area: "Vasai West",
-        city: "Vasai",
-        pincode: "401201",
         isDefault: true,
       },
     });
-    console.log(
-      "✅ Test customer created (customer@bisleri-vasai.com / customer123)",
-    );
+
+    if (!existingAddress) {
+      await prisma.address.create({
+        data: {
+          userId: customer.id,
+          street: "123 Main Street",
+          area: "Vasai West",
+          city: "Vasai",
+          pincode: "401201",
+          isDefault: true,
+        },
+      });
+    }
 
     // Create cart for customer
-    await prisma.cart.create({
-      data: {
+    const existingCart = await prisma.cart.findUnique({
+      where: {
         userId: customer.id,
       },
     });
+
+    if (!existingCart) {
+      await prisma.cart.create({
+        data: {
+          userId: customer.id,
+        },
+      });
+    }
     console.log("✅ Test customer cart created");
 
     console.log("🌱 Seed complete!");

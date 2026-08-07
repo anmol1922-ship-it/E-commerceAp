@@ -140,8 +140,8 @@ Same endpoints, same request/response format:
 ✅ Admin order management
 ✅ Dashboard statistics
 ✅ Pin code validation (Vasai specific: 401201-401599)
-✅ 18% GST calculation
-✅ ₹30 delivery charge (free if >₹500)
+✅ 5% GST calculation
+✅ ₹10 delivery charge (free if >₹1000)
 
 ## Testing After Setup
 

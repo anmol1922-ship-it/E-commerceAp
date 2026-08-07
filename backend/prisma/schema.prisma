@@ -198,9 +198,9 @@ model Supplier {
 
 model AppSettings {
   id                    String   @id @default("app_settings")
-  gstRate               Float    @default(0.18)
-  deliveryCharge        Float    @default(30)
-  freeDeliveryThreshold Float    @default(500)
+  gstRate               Float    @default(0.05)
+  deliveryCharge        Float    @default(10)
+  freeDeliveryThreshold Float    @default(1000)
   minimumOrderAmount    Float    @default(0)
   servicablePincodes    String[] @default(["401201","401202","401203","401204","401205","401207","401208","401209","401210","401301","401302","401303","401304","401305"])
   deliverySlots         String[] @default(["9 AM – 12 PM","12 PM – 3 PM","3 PM – 6 PM","6 PM – 9 PM"])

@@ -481,8 +481,8 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     }
 
     // Calculate totals
-    const gst = Math.round(subtotal * 0.18 * 100) / 100;
-    const deliveryCharge = subtotal >= 500 ? 0 : 30;
+    const gst = Math.round(subtotal * 0.05 * 100) / 100;
+    const deliveryCharge = subtotal >= 1000 ? 0 : 10;
     const totalAmount =
       Math.round((subtotal + gst + deliveryCharge) * 100) / 100;
 
@@ -552,8 +552,8 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     }
 
     // Calculate totals
-    const gst = Math.round(subtotal * 0.18 * 100) / 100;
-    const deliveryCharge = subtotal >= 500 ? 0 : 30;
+    const gst = Math.round(subtotal * 0.05 * 100) / 100;
+    const deliveryCharge = subtotal >= 1000 ? 0 : 10;
     const totalAmount =
       Math.round((subtotal + gst + deliveryCharge) * 100) / 100;
 

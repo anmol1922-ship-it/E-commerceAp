@@ -33,7 +33,7 @@ export default function Checkout() {
   ];
   const GST_RATE = settings?.gstRate ?? 0.18;
   const FREE_DELIVERY_THRESHOLD = settings?.freeDeliveryThreshold ?? 500;
-  const DELIVERY_CHARGE = settings?.deliveryCharge ?? 30;
+  const DELIVERY_CHARGE = settings?.deliveryCharge ?? 10;
   const { items } = useSelector((state: RootState) => state.cart);
   const { user } = useSelector((state: RootState) => state.auth);
 
