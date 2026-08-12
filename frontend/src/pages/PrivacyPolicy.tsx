@@ -108,7 +108,8 @@ const PrivacyPolicy: React.FC = () => {
           </p>
 
           <p>
-            To request account deletion, visit our{" "}
+            To request account deletion, you can also drop a mail to us at
+            {"tayaldistributors01@gmail.com"}
             <a href="/delete-account">Delete Account</a> page.
           </p>
         </section>
