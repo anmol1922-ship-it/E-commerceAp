@@ -11,7 +11,7 @@ import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import About from "./pages/About";
 import Privacy from "./pages/PrivacyPolicy";
-import DeleteAccount from "./pages/deleteAccount";
+import DeleteAccount from "./pages/DeleteAccount";
 
 // Admin Components
 import AdminLayout from "./components/admin/AdminLayout";
