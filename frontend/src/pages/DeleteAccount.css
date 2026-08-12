@@ -1,0 +1,290 @@
+.delete-account-page {
+  min-height: 100vh;
+  background: #f7f9fb;
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+
+.delete-account-container {
+  max-width: 700px;
+  margin: 0 auto;
+  background: #ffffff;
+  padding: 45px 55px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
+/* Header */
+
+.delete-account-header {
+  text-align: center;
+  padding-bottom: 30px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.delete-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  background: #fff4e5;
+
+  color: #d97706;
+  font-size: 28px;
+}
+
+.delete-account-header h1 {
+  margin: 0 0 12px;
+
+  font-size: 32px;
+  font-weight: 700;
+
+  color: #1f2937;
+}
+
+.delete-account-header p {
+  max-width: 560px;
+  margin: 0 auto;
+
+  font-size: 16px;
+  line-height: 1.7;
+
+  color: #6b7280;
+}
+
+/* Warning */
+
+.warning-box {
+  margin-top: 30px;
+  padding: 22px 24px;
+
+  background: #fff8ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+}
+
+.warning-box h2 {
+  margin: 0 0 10px;
+
+  font-size: 18px;
+  font-weight: 600;
+
+  color: #92400e;
+}
+
+.warning-box p {
+  margin: 0 0 15px;
+
+  font-size: 15px;
+  line-height: 1.7;
+
+  color: #78350f;
+}
+
+.warning-box ul {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.warning-box li {
+  margin-bottom: 8px;
+
+  font-size: 15px;
+  line-height: 1.6;
+
+  color: #78350f;
+}
+
+.warning-box li:last-child {
+  margin-bottom: 0;
+}
+
+/* Form */
+
+.delete-account-form {
+  margin-top: 32px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  color: #374151;
+}
+
+.form-group input {
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 13px 14px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+
+  background: #ffffff;
+
+  font-size: 16px;
+  color: #1f2937;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.form-group input::placeholder {
+  color: #9ca3af;
+}
+
+.form-group input:focus {
+  border-color: #0066cc;
+
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.form-group input:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+/* Delete button */
+
+.delete-button {
+  width: 100%;
+
+  padding: 13px 20px;
+
+  border: none;
+  border-radius: 7px;
+
+  background: #dc2626;
+  color: #ffffff;
+
+  font-size: 16px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.1s ease;
+}
+
+.delete-button:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.delete-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.delete-button:disabled {
+  background: #fca5a5;
+  cursor: not-allowed;
+}
+
+/* Messages */
+
+.delete-message {
+  margin-top: 18px;
+
+  padding: 13px 15px;
+
+  border-radius: 7px;
+
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.delete-message.success {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.delete-message.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+/* Footer */
+
+.delete-account-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  gap: 12px;
+
+  margin-top: 35px;
+  padding-top: 25px;
+
+  border-top: 1px solid #e5e7eb;
+
+  font-size: 14px;
+}
+
+.delete-account-footer a {
+  color: #0066cc;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.delete-account-footer a:hover {
+  text-decoration: underline;
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  .delete-account-page {
+    padding: 15px 10px;
+  }
+
+  .delete-account-container {
+    padding: 30px 22px;
+    border-radius: 8px;
+  }
+
+  .delete-account-header h1 {
+    font-size: 28px;
+  }
+
+  .delete-account-header p {
+    font-size: 15px;
+  }
+
+  .warning-box {
+    padding: 18px;
+  }
+
+  .warning-box p,
+  .warning-box li {
+    font-size: 14px;
+  }
+
+  .form-group input {
+    font-size: 16px;
+  }
+
+  .delete-account-footer {
+    flex-direction: column;
+    gap: 8px;
+  }
+}

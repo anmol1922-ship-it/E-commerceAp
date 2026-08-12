@@ -39,6 +39,13 @@ export default function Navbar() {
               Admin
             </Link>
           )}
+          {/* Privacy Policy */}
+          <Link
+            to="/privacy-policy"
+            className="hover:text-emerald-600 transition"
+          >
+            Privacy
+          </Link>
         </nav>
 
         {/* Actions */}
@@ -96,6 +103,15 @@ export default function Navbar() {
           >
             Home
           </Link>
+          {user?.role === "admin" && (
+            <Link
+              to="/admin"
+              className="block py-2 text-gray-700"
+              onClick={() => setMenuOpen(false)}
+            >
+              Admin
+            </Link>
+          )}
           <Link
             to="/products"
             className="block py-2 text-gray-700"
@@ -110,6 +126,14 @@ export default function Navbar() {
           >
             About
           </Link>
+          {/* Privacy Policy */}
+          <Link
+            to="/privacy-policy"
+            className="block py-2 text-gray-700"
+            onClick={() => setMenuOpen(false)}
+          >
+            Privacy Policy
+          </Link>
           {user ? (
             <>
               <Link
@@ -119,6 +143,15 @@ export default function Navbar() {
               >
                 Profile
               </Link>
+              {/* Delete Account */}
+              <Link
+                to="/delete-account"
+                className="block py-2 text-red-500"
+                onClick={() => setMenuOpen(false)}
+              >
+                Delete Account
+              </Link>
+
               <button
                 onClick={() => {
                   dispatch(logout());

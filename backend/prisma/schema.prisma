@@ -9,18 +9,19 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  name      String
-  email     String    @unique
-  phone     String
-  password  String
-  role      String    @default("customer")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  addresses Address[]
-  cart      Cart?
-  orders    Order[]
- jarReturns JarReturn[]
+  id         String      @id @default(cuid())
+  name       String
+  email      String      @unique
+  phone      String
+  password   String
+  role       String      @default("customer")
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  addresses  Address[]
+  cart       Cart?
+  orders     Order[]
+  jarReturns JarReturn[]
+
   @@index([email])
   @@index([phone])
 }
@@ -41,29 +42,30 @@ model Address {
 }
 
 model Product {
-  id             String      @id @default(cuid())
-  name           String
-  slug           String      @unique
-  description    String
-  price          Float
-  mrp            Float
-  category       String
-  size           String
-  bottlesPerCase Int         @default(1)
-  imageUrl       String      @default("/images/bisleri/default.svg")
-  images         String[]    @default([])
-  stock          Int         @default(100)
-  isAvailable    Boolean     @default(true)
-  popularity     Int         @default(0)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  cartItems      CartItem[]
-  orderItems     OrderItem[]
-  costPrice      Float    @default(0)
-  reorderLevel   Int      @default(20)
+  id                    String                 @id @default(cuid())
+  name                  String
+  slug                  String                 @unique
+  description           String
+  price                 Float
+  mrp                   Float
+  category              String
+  size                  String
+  bottlesPerCase        Int                    @default(1)
+  imageUrl              String                 @default("/images/bisleri/default.svg")
+  images                String[]               @default([])
+  stock                 Int                    @default(100)
+  isAvailable           Boolean                @default(true)
+  popularity            Int                    @default(0)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  cartItems             CartItem[]
+  orderItems            OrderItem[]
+  costPrice             Float                  @default(0)
+  reorderLevel          Int                    @default(20)
   inventoryTransactions InventoryTransaction[]
-  supplierId     String?
-  supplier       Supplier? @relation(fields: [supplierId], references: [id])
+  supplierId            String?
+  supplier              Supplier?              @relation(fields: [supplierId], references: [id])
+
   @@index([slug])
   @@index([category, price])
   @@index([isAvailable])
@@ -134,64 +136,68 @@ model OrderItem {
   @@index([orderId])
   @@index([productId])
 }
+
 model InventoryTransaction {
-  id         String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  type       String
-  quantity   Int
-  unitCost         Float?
-  totalCost        Float?
-  referenceNumber  String?
+  type            String
+  quantity        Int
+  unitCost        Float?
+  totalCost       Float?
+  referenceNumber String?
   supplierId      String?
-  remarks    String?
- notes           String?
-  createdAt  DateTime @default(now())
- createdBy        String?
+  remarks         String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  createdBy       String?
+
   @@index([productId])
   @@index([type])
   @@index([createdAt])
   @@index([productId, createdAt])
 }
+
 model JarReturn {
-  id             String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  customerName   String
-  customerPhone  String
+  customerName  String
+  customerPhone String
 
-  jarsIssued     Int      @default(0)
-  jarsReturned   Int      @default(0)
-  pendingJars         Int      @default(0)
-  userId              String?
-  user                User? @relation(fields: [userId], references: [id])
-  depositAmount       Float    @default(0)
+  jarsIssued    Int     @default(0)
+  jarsReturned  Int     @default(0)
+  pendingJars   Int     @default(0)
+  userId        String?
+  user          User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  depositAmount Float   @default(0)
 
-  outstandingDeposit  Float    @default(0)
+  outstandingDeposit Float @default(0)
 
-  returnStatus        String   @default("pending")
-  lastReturnDate      DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  returnStatus   String    @default("pending")
+  lastReturnDate DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
   @@index([userId])
   @@index([customerPhone])
   @@index([customerName])
   @@index([createdAt])
   @@index([returnStatus])
-
 }
+
 model Supplier {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  name        String
-  phone       String?
-  email       String?
+  name  String
+  phone String?
+  email String?
 
-  products    Product[]
+  products Product[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([name])
 }
@@ -202,8 +208,8 @@ model AppSettings {
   deliveryCharge        Float    @default(10)
   freeDeliveryThreshold Float    @default(1000)
   minimumOrderAmount    Float    @default(0)
-  servicablePincodes    String[] @default(["401201","401202","401203","401204","401205","401207","401208","401209","401210","401301","401302","401303","401304","401305"])
-  deliverySlots         String[] @default(["9 AM – 12 PM","12 PM – 3 PM","3 PM – 6 PM","6 PM – 9 PM"])
+  servicablePincodes    String[] @default(["401201", "401202", "401203", "401204", "401205", "401207", "401208", "401209", "401210", "401301", "401302", "401303", "401304", "401305"])
+  deliverySlots         String[] @default(["9 AM – 12 PM", "12 PM – 3 PM", "3 PM – 6 PM", "6 PM – 9 PM"])
   businessName          String   @default("Bisleri Vasai")
   supportPhone          String   @default("")
   supportEmail          String   @default("")
@@ -232,4 +238,3 @@ model Category {
   @@index([slug])
   @@index([isActive])
 }
-

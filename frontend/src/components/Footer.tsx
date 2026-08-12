@@ -36,6 +36,22 @@ export default function Footer() {
                 Cart
               </Link>
             </li>
+            <li>
+              <Link
+                to="/privacy-policy"
+                className="hover:text-emerald-400 transition"
+              >
+                Privacy Policy
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/delete-account"
+                className="hover:text-emerald-400 transition"
+              >
+                Delete Account
+              </Link>
+            </li>
           </ul>
         </div>
         {/* Contact */}

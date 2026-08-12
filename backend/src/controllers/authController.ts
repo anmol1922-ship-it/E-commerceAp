@@ -5,6 +5,7 @@ import { prisma } from "../config/db";
 import { config } from "../config";
 import { AuthRequest } from "../middleware/auth";
 import { hashPassword, comparePassword } from "../models/User";
+const bcrypt = require("bcryptjs");
 
 const generateToken = (userId: string): string => {
   return jwt.sign({ userId }, config.jwtSecret, {
@@ -139,6 +140,47 @@ export const addAddress = async (req: AuthRequest, res: Response) => {
     });
 
     res.json({ success: true, address });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+export const deleteAccount = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.user?.id ? req.body : req.body; // Use email from request body if user is not authenticated
+    console.log("Delete account request received for email:", email);
+    if (!email) {
+      return res.status(400).json({
+        message: "Email is  required.",
+      });
+    }
+    const user = await prisma.user.findUnique({
+      where: {
+        email: email.trim().toLowerCase(),
+      },
+    });
+    if (!user) {
+      return res.status(404).json({
+        message: "Account not found.",
+      });
+    }
+
+    // Verify password
+    // const passwordValid = await bcrypt.compare(password, user.password);
+
+    // if (!passwordValid) {
+    //   return res.status(401).json({
+    //     message: "Invalid email or password.",
+    //   });
+    // }
+    await prisma.user.delete({
+      where: {
+        id: user.id,
+      },
+    });
+
+    return res.status(200).json({
+      message: "Account deleted successfully.",
+    });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

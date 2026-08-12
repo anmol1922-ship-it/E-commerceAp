@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import About from "./pages/About";
+import Privacy from "./pages/PrivacyPolicy";
 
 // Admin Components
 import AdminLayout from "./components/admin/AdminLayout";
@@ -22,6 +23,8 @@ import JarReturnManagement from "./pages/admin/jar-returns/JarReturnManagement";
 import Reports from "./pages/admin/reports/Reports";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminOrders from "./pages/admin/AdminOrders";
+import DeleteAccount from "./pages/DeleteAccount";
+import NotFound from "./pages/NotFound";
 
 function App() {
   return (
@@ -36,6 +39,9 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/about" element={<About />} />
+          <Route path="/privacy-policy" element={<Privacy />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
+          <Route path="*" element={<NotFound />} />
 
           {/* Authenticated Customer Routes */}
           <Route
