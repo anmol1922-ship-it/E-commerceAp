@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import About from "./pages/About";
 import Privacy from "./pages/PrivacyPolicy";
+import DeleteAccount from "./pages/deleteAccount";
 
 // Admin Components
 import AdminLayout from "./components/admin/AdminLayout";
@@ -23,7 +24,6 @@ import JarReturnManagement from "./pages/admin/jar-returns/JarReturnManagement";
 import Reports from "./pages/admin/reports/Reports";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminOrders from "./pages/admin/AdminOrders";
-import DeleteAccount from "./pages/DeleteAccount";
 import NotFound from "./pages/NotFound";
 
 function App() {
