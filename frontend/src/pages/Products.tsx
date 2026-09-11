@@ -10,6 +10,7 @@ export default function Products() {
   const { products, loading, error } = useSelector(
     (state: RootState) => state.products,
   );
+  const { user } = useSelector((state: RootState) => state.auth);
 
   const [category, setCategory] = useState("");
   const [sort, setSort] = useState("");
@@ -21,7 +22,7 @@ export default function Products() {
     if (sort) params.sort = sort;
     if (search) params.search = search;
     dispatch(fetchProducts(params));
-  }, [dispatch, category, sort, search]);
+  }, [dispatch, category, sort, search, user?.id, user?.customerType?.id]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

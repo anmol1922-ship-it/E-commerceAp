@@ -42,6 +42,14 @@ export default function Profile() {
               {user.role}
             </span>
           </div>
+          {user.customerType && (
+            <div>
+              <span className="text-gray-500">Customer Type:</span>{" "}
+              <span className="font-medium text-gray-900">
+                {user.customerType.name}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -68,8 +76,8 @@ export default function Profile() {
                     order.status === "delivered"
                       ? "bg-emerald-100 text-emerald-700"
                       : order.status === "cancelled"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-yellow-100 text-yellow-700"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-yellow-100 text-yellow-700"
                   }`}
                 >
                   {order.status}
