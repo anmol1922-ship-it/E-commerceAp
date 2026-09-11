@@ -5,6 +5,12 @@ import { prisma } from "../config/db";
 import { config } from "../config";
 import { AuthRequest } from "../middleware/auth";
 import crypto from "crypto";
+import {
+  getCustomerTypeForUser,
+  getPrice,
+  calculateLineTotal,
+  PricingError,
+} from "../services/pricingService";
 
 const razorpay = new Razorpay({
   key_id: config.razorpayKeyId,
@@ -26,10 +32,6 @@ const getBusinessConfig = async () => {
 
 export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
-    console.log("Received createOrder request:", {
-      userId: req.user?.id,
-      body: req.body,
-    });
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -41,6 +43,16 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       paymentMethod,
       items: requestItems,
     } = req.body;
+
+    const customerType = await getCustomerTypeForUser(req.user.id);
+    if (
+      paymentMethod === "razorpay" &&
+      (!config.razorpayKeyId || !config.razorpayKeySecret)
+    ) {
+      return res.status(500).json({
+        message: "Payment gateway not configured. Please try COD.",
+      });
+    }
 
     // Get stored cart with items
     const cart = await prisma.cart.findUnique({
@@ -54,18 +66,17 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "Cart is empty" });
     }
 
-    const resolveProduct = async (productRef: string) => {
-      console.log("Resolving product for reference:", productRef);
-      console.log("Searching for product by ID:", prisma.product.findMany());
-      const products = await prisma.product.findMany();
-      console.log(products);
+    const resolveProduct = async (productRef: unknown) => {
+      const reference = String(productRef ?? "");
+      if (!reference) return null;
+
       const direct = await prisma.product.findUnique({
-        where: { id: productRef },
+        where: { id: reference },
       });
       if (direct) return direct;
 
       const bySlug = await prisma.product.findFirst({
-        where: { slug: productRef },
+        where: { slug: reference },
       });
       if (bySlug) return bySlug;
 
@@ -73,59 +84,52 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     };
 
     // Validate products and calculate subtotal
-    const items: any[] = [];
+    const items: Array<{
+      productId: string;
+      name: string;
+      unitPrice: number;
+      totalPrice: number;
+      quantity: number;
+    }> = [];
     let subtotal = 0;
+
+    const addItem = async (product: any, quantityValue: unknown) => {
+      const quantity = Number(quantityValue);
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        throw new PricingError("Quantity must be a positive whole number", 400);
+      }
+
+      if (!product || !product.isAvailable) {
+        throw new PricingError(
+          `Product ${product?.name || "unknown"} is not available`,
+          400,
+        );
+      }
+      if (product.stock < quantity) {
+        throw new PricingError(`Insufficient stock for ${product.name}`, 400);
+      }
+
+      const unitPrice = await getPrice(product.id, customerType.id);
+      const totalPrice = calculateLineTotal(unitPrice, quantity);
+
+      items.push({
+        productId: product.id,
+        name: product.name,
+        unitPrice,
+        totalPrice,
+        quantity,
+      });
+      subtotal += totalPrice;
+    };
 
     if (useRequestItems) {
       for (const requestItem of requestItems) {
         const product = await resolveProduct(requestItem.product);
-        console.log("Validating request items:", requestItem);
-        if (!product || !product.isAvailable) {
-          return res.status(400).json({
-            message: `Product ${product?.name || requestItem.product} is not available`,
-          });
-        }
-        if (product.stock < requestItem.quantity) {
-          return res.status(400).json({
-            message: `Insufficient stock for ${product.name}`,
-          });
-        }
-
-        items.push({
-          productId: product.id,
-          name: product.name,
-          price: product.price,
-          quantity: requestItem.quantity,
-        });
-        subtotal += Number(product.price) * requestItem.quantity;
+        await addItem(product, requestItem.quantity);
       }
     } else {
       for (const cartItem of cart.items) {
-        const product = cartItem.product;
-        console.log(
-          "Validating cart item:",
-          cartItem,
-          "with productssss:",
-          product,
-        );
-        if (!product || !product.isAvailable) {
-          return res.status(400).json({
-            message: `Product ${product?.name || "unknown"} is not available`,
-          });
-        }
-        if (product.stock < cartItem.quantity) {
-          return res.status(400).json({
-            message: `Insufficient stock for ${product.name}`,
-          });
-        }
-
-        items.push({
-          productId: product.id,
-          name: product.name,
-          price: product.price,
-          quantity: cartItem.quantity,
-        });
-        subtotal += Number(product.price) * cartItem.quantity;
+        await addItem(cartItem.product, cartItem.quantity);
       }
     }
 
@@ -144,6 +148,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       const newOrder = await tx.order.create({
         data: {
           userId: req.user.id,
+          customerTypeId: customerType.id,
           paymentMethod: paymentMethod as "razorpay" | "cod",
           shippingAddress: JSON.stringify(shippingAddress),
           subtotal,
@@ -162,7 +167,8 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
           data: {
             orderId: newOrder.id,
             productId: item.productId,
-            price: item.price,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
             quantity: item.quantity,
           },
         });
@@ -188,17 +194,6 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     // Create Razorpay order if online payment
     let razorpayOrder = null;
     if (paymentMethod === "razorpay") {
-      console.log("Creating Razorpay order with config:", {
-        hasKeyId: !!config.razorpayKeyId,
-        hasKeySecret: !!config.razorpayKeySecret,
-      });
-
-      if (!config.razorpayKeyId || !config.razorpayKeySecret) {
-        console.error("Missing Razorpay credentials");
-        return res.status(500).json({
-          message: "Payment gateway not configured. Please try COD.",
-        });
-      }
       razorpayOrder = await razorpay.orders.create({
         amount: Math.round(totalAmount * 100),
         currency: "INR",
@@ -217,13 +212,11 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       razorpayKeyId: config.razorpayKeyId,
     };
 
-    console.log("Sending response:", {
-      hasRazorpayKeyId: !!response.razorpayKeyId,
-      razorpayKeyId: response.razorpayKeyId,
-    });
-
     res.status(201).json(response);
   } catch (error: any) {
+    if (error instanceof PricingError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
     res.status(500).json({ message: error.message });
   }
 };
@@ -244,7 +237,7 @@ export const verifyPayment = async (req: AuthRequest, res: Response) => {
     }
 
     const order = await prisma.order.findFirst({
-      where: { razorpayOrderId: razorpay_order_id },
+      where: { razorpayOrderId: razorpay_order_id, userId: req.user.id },
     });
 
     if (!order) return res.status(404).json({ message: "Order not found" });
@@ -273,7 +266,7 @@ export const getMyOrders = async (req: AuthRequest, res: Response) => {
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
         where: { userId: req.user.id },
-        include: { items: true },
+        include: { items: true, customerType: true },
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
@@ -298,7 +291,10 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
         id: req.params.id,
         userId: req.user.id,
       },
-      include: { items: { include: { product: true } } },
+      include: {
+        customerType: true,
+        items: { include: { product: true } },
+      },
     });
 
     if (!order) return res.status(404).json({ message: "Order not found" });
@@ -324,6 +320,7 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
         where,
         include: {
           user: { select: { name: true, email: true, phone: true } },
+          customerType: true,
           items: true,
         },
         orderBy: { createdAt: "desc" },

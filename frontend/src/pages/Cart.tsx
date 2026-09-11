@@ -1,17 +1,62 @@
+import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../store";
 import {
   removeFromCart,
   updateQuantity,
   clearCart,
+  replaceCart,
+  type CartItem,
 } from "../store/slices/cartSlice";
 import { Link } from "react-router-dom";
 import { FiTrash2, FiMinus, FiPlus } from "react-icons/fi";
+import api from "../api/axios";
 
 export default function Cart() {
   const dispatch = useDispatch();
   const { items } = useSelector((state: RootState) => state.cart);
+  const { user } = useSelector((state: RootState) => state.auth);
   const { settings } = useSelector((state: RootState) => state.settings);
+
+  useEffect(() => {
+    if (!user) return;
+
+    api
+      .get("/cart")
+      .then(({ data }) => dispatch(replaceCart(data.cart.items)))
+      .catch(() => undefined);
+  }, [dispatch, user]);
+
+  const refreshServerCart = async (
+    request: Promise<{ data: { cart: { items: CartItem[] } } }>,
+  ) => {
+    const { data } = await request;
+    dispatch(replaceCart(data.cart.items));
+  };
+
+  const handleClear = async () => {
+    if (user) {
+      await refreshServerCart(api.delete("/cart/clear"));
+    } else {
+      dispatch(clearCart());
+    }
+  };
+
+  const handleRemove = async (productId: string) => {
+    if (user) {
+      await refreshServerCart(api.delete(`/cart/item/${productId}`));
+    } else {
+      dispatch(removeFromCart(productId));
+    }
+  };
+
+  const handleQuantity = async (productId: string, quantity: number) => {
+    if (user) {
+      await refreshServerCart(api.put("/cart/update", { productId, quantity }));
+    } else {
+      dispatch(updateQuantity({ id: productId, quantity }));
+    }
+  };
 
   const GST_RATE = settings?.gstRate ?? 0.05;
   const FREE_DELIVERY_THRESHOLD = settings?.freeDeliveryThreshold ?? 10000;
@@ -50,7 +95,7 @@ export default function Cart() {
           Shopping Cart ({items.length})
         </h1>
         <button
-          onClick={() => dispatch(clearCart())}
+          onClick={() => void handleClear()}
           className="text-sm text-red-500 hover:text-red-700 font-medium"
         >
           Clear All
@@ -81,7 +126,7 @@ export default function Cart() {
               </div>
               <div className="flex flex-col items-end justify-between">
                 <button
-                  onClick={() => dispatch(removeFromCart(item.product.id))}
+                  onClick={() => void handleRemove(item.product.id)}
                   className="text-gray-400 hover:text-red-500"
                 >
                   <FiTrash2 size={18} />
@@ -89,12 +134,7 @@ export default function Cart() {
                 <div className="flex items-center gap-2 border rounded-lg px-2 py-1">
                   <button
                     onClick={() =>
-                      dispatch(
-                        updateQuantity({
-                          id: item.product.id,
-                          quantity: item.quantity - 1,
-                        }),
-                      )
+                      void handleQuantity(item.product.id, item.quantity - 1)
                     }
                     className="text-gray-600 hover:text-emerald-600"
                   >
@@ -105,12 +145,7 @@ export default function Cart() {
                   </span>
                   <button
                     onClick={() =>
-                      dispatch(
-                        updateQuantity({
-                          id: item.product.id,
-                          quantity: item.quantity + 1,
-                        }),
-                      )
+                      void handleQuantity(item.product.id, item.quantity + 1)
                     }
                     className="text-gray-600 hover:text-emerald-600"
                   >

@@ -14,11 +14,19 @@ import {
   recordJarReturn,
   getJarReturnSummary,
   exportOrders,
+  updateUserCustomerType,
 } from "../controllers/adminController";
 
 const router = Router();
 
 const verifyAdmin = isAdmin;
+
+router.put(
+  "/users/:id/customer-type",
+  authenticate,
+  verifyAdmin,
+  updateUserCustomerType,
+);
 
 // ============ DASHBOARD ROUTES ============
 router.get("/dashboard/kpis", authenticate, verifyAdmin, getDashboardKPIs);

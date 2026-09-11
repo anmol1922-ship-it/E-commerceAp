@@ -1,11 +1,18 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import api from "../../api/axios";
 
-interface User {
+export interface CustomerType {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface User {
   id: string;
   name: string;
   email: string;
   role: string;
+  customerType: CustomerType | null;
 }
 
 interface AuthState {

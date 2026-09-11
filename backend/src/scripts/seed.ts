@@ -3,6 +3,10 @@ dotenv.config();
 
 import { prisma } from "../config/db";
 import { hashPassword } from "../models/User";
+import {
+  CUSTOMER_TYPE_CODES,
+  CUSTOMER_TYPE_NAMES,
+} from "../constants/customerType";
 
 const products = [
   {
@@ -186,9 +190,38 @@ const products = [
   },
 ];
 
+const distributorPrices: Record<string, number> = {
+  "bisleri-20l-jar": 70,
+  "bisleri-10l-jar": 90,
+  "bisleri-5l-jar": 55,
+};
+
 const seed = async () => {
   try {
     console.log("🌱 Starting seed...");
+
+    const endUserType = await prisma.customerType.upsert({
+      where: { code: CUSTOMER_TYPE_CODES.END_USER },
+      update: {
+        name: CUSTOMER_TYPE_NAMES[CUSTOMER_TYPE_CODES.END_USER],
+        isActive: true,
+      },
+      create: {
+        code: CUSTOMER_TYPE_CODES.END_USER,
+        name: CUSTOMER_TYPE_NAMES[CUSTOMER_TYPE_CODES.END_USER],
+      },
+    });
+    const distributorType = await prisma.customerType.upsert({
+      where: { code: CUSTOMER_TYPE_CODES.DISTRIBUTOR },
+      update: {
+        name: CUSTOMER_TYPE_NAMES[CUSTOMER_TYPE_CODES.DISTRIBUTOR],
+        isActive: true,
+      },
+      create: {
+        code: CUSTOMER_TYPE_CODES.DISTRIBUTOR,
+        name: CUSTOMER_TYPE_NAMES[CUSTOMER_TYPE_CODES.DISTRIBUTOR],
+      },
+    });
 
     // // Delete existing data
     // await prisma.cartItem.deleteMany({});
@@ -201,24 +234,43 @@ const seed = async () => {
 
     // Seed products
     for (const product of products) {
-      await prisma.product.upsert({
+      const { price: endUserPrice, ...catalogProduct } = product;
+      const savedProduct = await prisma.product.upsert({
         where: {
           slug: product.slug,
         },
-        update: {
-          name: product.name,
-          description: product.description,
-          price: product.price,
-          mrp: product.mrp,
-          category: product.category,
-          size: product.size,
-          bottlesPerCase: product.bottlesPerCase,
-          imageUrl: product.imageUrl,
-          stock: product.stock,
-          isAvailable: product.isAvailable,
-          popularity: product.popularity,
+        update: catalogProduct,
+        create: catalogProduct,
+      });
+
+      await prisma.productPrice.upsert({
+        where: {
+          productId_customerTypeId: {
+            productId: savedProduct.id,
+            customerTypeId: endUserType.id,
+          },
         },
-        create: product,
+        update: { price: endUserPrice },
+        create: {
+          productId: savedProduct.id,
+          customerTypeId: endUserType.id,
+          price: endUserPrice,
+        },
+      });
+
+      await prisma.productPrice.upsert({
+        where: {
+          productId_customerTypeId: {
+            productId: savedProduct.id,
+            customerTypeId: distributorType.id,
+          },
+        },
+        update: { price: distributorPrices[product.slug] ?? endUserPrice },
+        create: {
+          productId: savedProduct.id,
+          customerTypeId: distributorType.id,
+          price: distributorPrices[product.slug] ?? endUserPrice,
+        },
       });
     }
 
@@ -260,6 +312,7 @@ const seed = async () => {
         phone: "8888888888",
         password: customerPassword,
         role: "customer",
+        customerTypeId: endUserType.id,
       },
       create: {
         name: "Test Customer",

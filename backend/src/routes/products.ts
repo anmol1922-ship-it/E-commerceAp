@@ -7,13 +7,17 @@ import {
   updateProduct,
   deleteProduct,
 } from "../controllers/productController";
-import { authenticate, isAdmin } from "../middleware/auth";
+import {
+  authenticate,
+  isAdmin,
+  optionalAuthenticate,
+} from "../middleware/auth";
 
 const router = Router();
 
-router.get("/", getProducts);
-router.get("/slug/:slug", getProductBySlug);
-router.get("/:id", getProductById);
+router.get("/", optionalAuthenticate, getProducts);
+router.get("/slug/:slug", optionalAuthenticate, getProductBySlug);
+router.get("/:id", optionalAuthenticate, getProductById);
 
 // Admin routes
 router.post("/", authenticate, isAdmin, createProduct);

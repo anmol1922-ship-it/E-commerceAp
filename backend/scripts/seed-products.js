@@ -13,7 +13,6 @@ INSERT INTO "Product" (
   "name",
   "slug",
   "description",
-  "price",
   "mrp",
   "category",
   "size",
@@ -35,7 +34,6 @@ INSERT INTO "Product" (
   'Bisleri 20L Water Jar',
   'bisleri-20l-jar',
   'Premium 20-litre water jar for home and office.',
-  100,
   120,
   'jar',
   '20L',
@@ -57,7 +55,6 @@ INSERT INTO "Product" (
   'Bisleri 10L Water Jar',
   'bisleri-10l-jar',
   'Convenient 10-litre water jar for compact kitchens.',
-  125,
   140,
   'jar',
   '10L',
@@ -79,7 +76,6 @@ INSERT INTO "Product" (
   'Bisleri 5L Water Jar',
   'bisleri-5l-jar',
   'Portable 5-litre jar for travel and small gatherings.',
-  75,
   85,
   'jar',
   '5L',
@@ -101,7 +97,6 @@ INSERT INTO "Product" (
   'Bisleri 2L Case (9 Bottles)',
   'bisleri-2l-case',
   'Case of 9 bottles of 2 litres each.',
-  180,
   200,
   'case',
   '2L',
@@ -123,7 +118,6 @@ INSERT INTO "Product" (
   'Bisleri 1L Case (12 Bottles)',
   'bisleri-1l-case',
   'Case of 12 bottles of 1 litre each.',
-  240,
   264,
   'case',
   '1L',
@@ -145,7 +139,6 @@ INSERT INTO "Product" (
   'Bisleri 500ml Case (24 Bottles)',
   'bisleri-500ml-case',
   'Case of 24 bottles of 500ml each.',
-  240,
   264,
   'case',
   '500ml',
@@ -167,7 +160,6 @@ INSERT INTO "Product" (
   'Bisleri 250ml Case (48 Bottles)',
   'bisleri-250ml-case',
   'Case of 48 bottles of 250ml each.',
-  290,
   320,
   'case',
   '250ml',
@@ -189,7 +181,6 @@ INSERT INTO "Product" (
   'Bisleri 200ml Case (48 Bottles)',
   'bisleri-200ml-case',
   'Case of 48 bottles of 200ml each.',
-  260,
   288,
   'case',
   '200ml',
@@ -207,6 +198,39 @@ INSERT INTO "Product" (
 )
 
 ON CONFLICT ("slug") DO NOTHING;
+`;
+
+const priceSQL = `
+INSERT INTO "CustomerType" ("id", "code", "name", "isActive", "createdAt", "updatedAt")
+VALUES
+  ('customer-type-end-user', 'END_USER', 'End User', true, NOW(), NOW()),
+  ('customer-type-distributor', 'DISTRIBUTOR', 'Distributor', true, NOW(), NOW())
+ON CONFLICT ("code") DO UPDATE SET "name" = EXCLUDED."name", "isActive" = true, "updatedAt" = NOW();
+
+WITH seed_prices("slug", "endUserPrice", "distributorPrice") AS (
+  VALUES
+    ('bisleri-20l-jar', 100, 70),
+    ('bisleri-10l-jar', 125, 90),
+    ('bisleri-5l-jar', 75, 55),
+    ('bisleri-2l-case', 180, 180),
+    ('bisleri-1l-case', 240, 240),
+    ('bisleri-500ml-case', 240, 240),
+    ('bisleri-250ml-case', 290, 290),
+    ('bisleri-200ml-case', 260, 260)
+), price_rows AS (
+  SELECT p."id" AS "productId", 'customer-type-end-user' AS "customerTypeId", s."endUserPrice" AS "price"
+  FROM seed_prices s
+  JOIN "Product" p ON p."slug" = s."slug"
+  UNION ALL
+  SELECT p."id", 'customer-type-distributor', s."distributorPrice"
+  FROM seed_prices s
+  JOIN "Product" p ON p."slug" = s."slug"
+)
+INSERT INTO "ProductPrice" ("id", "productId", "customerTypeId", "price", "createdAt", "updatedAt")
+SELECT md5('seed:' || "productId" || ':' || "customerTypeId"), "productId", "customerTypeId", "price", NOW(), NOW()
+FROM price_rows
+ON CONFLICT ("productId", "customerTypeId") DO UPDATE
+SET "price" = EXCLUDED."price", "updatedAt" = NOW();
 `;
 // const seedSQL = `
 // INSERT INTO "Product" ("id", "name", "slug", "description", "price", "mrp", "category", "size", "bottlesPerCase", "imageUrl", "stock", "isAvailable", "popularity", "createdAt", "updatedAt") VALUES
@@ -229,6 +253,7 @@ async function seed() {
 
     console.log("📝 Seeding products...");
     await client.query(seedSQL);
+    await client.query(priceSQL);
     console.log("✅ Successfully seeded 8 products!\n");
 
     console.log("Available products:");

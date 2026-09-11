@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api from "../api/axios";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
 
 interface Product {
   id: string;
@@ -30,6 +32,7 @@ const testimonials = [
 
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const { user } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
     const fetchFeatured = async () => {
@@ -43,7 +46,7 @@ export default function Home() {
       }
     };
     fetchFeatured();
-  }, []);
+  }, [user?.id, user?.customerType?.id]);
 
   return (
     <div>
@@ -118,43 +121,6 @@ export default function Home() {
           >
             View All Products →
           </Link>
-        </div>
-      </section>
-
-      {/* Promo */}
-      {/* <section className="bg-emerald-50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-900">🎉 Special Offer</h2>
-          <p className="text-gray-600 mt-2">
-            Order 3+ jars and get ₹20 off on each jar. Free delivery on all
-            orders above ₹500.
-          </p>
-        </div>
-      </section> */}
-
-      {/* Testimonials */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-2xl font-bold text-gray-900 text-center">
-          What Vasai Customers Say
-        </h2>
-        <div className="grid md:grid-cols-3 gap-6 mt-10">
-          {testimonials.map((t) => (
-            <div
-              key={t.name}
-              className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm"
-            >
-              <p className="text-gray-600 italic">"{t.text}"</p>
-              <div className="mt-4 flex items-center gap-2">
-                <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold text-sm">
-                  {t.name[0]}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900 text-sm">{t.name}</p>
-                  <p className="text-xs text-gray-500">{t.area}</p>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
     </div>

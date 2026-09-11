@@ -1,0 +1,4 @@
+export const CUSTOMER_TYPE_CODES = {
+  END_USER: "END_USER",
+  DISTRIBUTOR: "DISTRIBUTOR",
+} as const;

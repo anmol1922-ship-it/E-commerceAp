@@ -9,21 +9,36 @@ datasource db {
 }
 
 model User {
-  id         String      @id @default(cuid())
-  name       String
-  email      String      @unique
-  phone      String
-  password   String
-  role       String      @default("customer")
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  addresses  Address[]
-  cart       Cart?
-  orders     Order[]
-  jarReturns JarReturn[]
+  id             String        @id @default(cuid())
+  name           String
+  email          String        @unique
+  phone          String
+  password       String
+  role           String        @default("customer")
+  customerTypeId String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  customerType   CustomerType? @relation(fields: [customerTypeId], references: [id])
+  addresses      Address[]
+  cart           Cart?
+  orders         Order[]
+  jarReturns     JarReturn[]
 
   @@index([email])
   @@index([phone])
+  @@index([customerTypeId])
+}
+
+model CustomerType {
+  id            String         @id @default(cuid())
+  code          String         @unique
+  name          String
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  users         User[]
+  productPrices ProductPrice[]
+  orders        Order[]
 }
 
 model Address {
@@ -46,7 +61,6 @@ model Product {
   name                  String
   slug                  String                 @unique
   description           String
-  price                 Float
   mrp                   Float
   category              String
   size                  String
@@ -59,6 +73,7 @@ model Product {
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   cartItems             CartItem[]
+  productPrices         ProductPrice[]
   orderItems            OrderItem[]
   costPrice             Float                  @default(0)
   reorderLevel          Int                    @default(20)
@@ -67,9 +82,24 @@ model Product {
   supplier              Supplier?              @relation(fields: [supplierId], references: [id])
 
   @@index([slug])
-  @@index([category, price])
+  @@index([category])
   @@index([isAvailable])
   @@index([reorderLevel])
+}
+
+model ProductPrice {
+  id             String       @id @default(cuid())
+  productId      String
+  customerTypeId String
+  price          Float
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customerType   CustomerType @relation(fields: [customerTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, customerTypeId])
+  @@index([customerTypeId])
+  @@index([productId])
 }
 
 model Cart {
@@ -99,39 +129,43 @@ model CartItem {
 }
 
 model Order {
-  id                String      @id @default(cuid())
+  id                String       @id @default(cuid())
   userId            String
+  customerTypeId    String
   shippingAddress   String
   deliverySlot      String
   paymentMethod     String
-  paymentStatus     String      @default("pending")
+  paymentStatus     String       @default("pending")
   razorpayOrderId   String?
   razorpayPaymentId String?
   subtotal          Float
   gst               Float
   deliveryCharge    Float
   totalAmount       Float
-  status            String      @default("placed")
+  status            String       @default("placed")
   trackingInfo      String?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerType      CustomerType @relation(fields: [customerTypeId], references: [id])
   items             OrderItem[]
 
   @@index([userId])
+  @@index([customerTypeId])
   @@index([status])
   @@index([createdAt])
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
-  orderId   String
-  productId String
-  quantity  Int
-  price     Float
-  createdAt DateTime @default(now())
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id])
+  id         String   @id @default(cuid())
+  orderId    String
+  productId  String
+  quantity   Int
+  unitPrice  Float
+  totalPrice Float
+  createdAt  DateTime @default(now())
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])

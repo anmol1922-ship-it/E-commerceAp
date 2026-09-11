@@ -15,6 +15,7 @@ export interface Product {
   stock: number;
   isAvailable: boolean;
   popularity: number;
+  prices?: Record<string, number>;
 }
 
 interface ProductState {

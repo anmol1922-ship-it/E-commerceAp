@@ -7,6 +7,7 @@ import {
   endOfMonth,
 } from "date-fns";
 import { prisma } from "../config/db";
+import { CUSTOMER_TYPE_CODES } from "../constants/customerType";
 
 declare global {
   namespace Express {
@@ -180,6 +181,47 @@ export const getDashboardKPIs = async (req: Request, res: Response) => {
       message: "Error fetching dashboard KPIs",
       error: error instanceof Error ? error.message : "Unknown error",
     });
+  }
+};
+
+// Admin: approve or change a customer's commercial pricing type.
+export const updateUserCustomerType = async (req: Request, res: Response) => {
+  try {
+    const customerTypeCode = String(req.body.customerTypeCode || "");
+    const supportedCodes = Object.values(CUSTOMER_TYPE_CODES) as string[];
+
+    if (!supportedCodes.includes(customerTypeCode)) {
+      return res.status(400).json({ message: "Invalid customer type" });
+    }
+
+    const customerType = await prisma.customerType.findUnique({
+      where: { code: customerTypeCode },
+    });
+    if (!customerType || !customerType.isActive) {
+      return res.status(404).json({ message: "Customer type not available" });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { customerTypeId: customerType.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        customerType: {
+          select: { id: true, code: true, name: true },
+        },
+      },
+    });
+
+    res.json({ success: true, user });
+  } catch (error: any) {
+    if (error.code === "P2025") {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -358,19 +400,28 @@ export const getInventoryProducts = async (req: Request, res: Response) => {
         where: whereCondition,
         skip,
         take: limit,
-        include: { supplier: true },
+        include: {
+          supplier: true,
+          productPrices: {
+            include: { customerType: { select: { code: true } } },
+          },
+        },
       }),
       prisma.product.count({ where: whereCondition }),
     ]);
 
     const formatted = products.map((p) => ({
+      sellingPrice:
+        p.productPrices.find(
+          (productPrice) =>
+            productPrice.customerType.code === CUSTOMER_TYPE_CODES.END_USER,
+        )?.price ?? 0,
       id: p.id,
       name: p.name,
       slug: p.slug,
       stock: p.stock,
       reorderLevel: p.reorderLevel,
       costPrice: p.costPrice,
-      sellingPrice: p.price,
       supplier: p.supplier?.name,
       status: p.stock === 0 ? "out" : p.stock <= 50 ? "low" : "healthy",
     }));

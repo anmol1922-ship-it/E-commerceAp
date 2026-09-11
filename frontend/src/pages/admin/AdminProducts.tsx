@@ -4,17 +4,27 @@ import { RootState } from "../../store";
 import { Navigate } from "react-router-dom";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
+import { CUSTOMER_TYPE_CODES } from "../../constants/customerType";
+
+interface AdminProduct {
+  id: string;
+  name: string;
+  size: string;
+  price: number;
+  prices?: Record<string, number>;
+  stock: number;
+}
 
 export default function AdminProducts() {
   const { user } = useSelector((state: RootState) => state.auth);
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<AdminProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ price: 0, stock: 0 });
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const [editForm, setEditForm] = useState({
+    endUserPrice: 0,
+    distributorPrice: 0,
+    stock: 0,
+  });
 
   const fetchProducts = async () => {
     try {
@@ -25,9 +35,19 @@ export default function AdminProducts() {
     }
   };
 
+  useEffect(() => {
+    void fetchProducts();
+  }, []);
+
   const handleUpdate = async (id: string) => {
     try {
-      await api.put(`/products/${id}`, editForm);
+      await api.put(`/products/${id}`, {
+        prices: {
+          [CUSTOMER_TYPE_CODES.END_USER]: editForm.endUserPrice,
+          [CUSTOMER_TYPE_CODES.DISTRIBUTOR]: editForm.distributorPrice,
+        },
+        stock: editForm.stock,
+      });
       toast.success("Product updated");
       setEditingId(null);
       fetchProducts();
@@ -61,7 +81,12 @@ export default function AdminProducts() {
               <tr>
                 <th className="px-4 py-3 text-left text-gray-600">Product</th>
                 <th className="px-4 py-3 text-left text-gray-600">Size</th>
-                <th className="px-4 py-3 text-left text-gray-600">Price</th>
+                <th className="px-4 py-3 text-left text-gray-600">
+                  End User Price
+                </th>
+                <th className="px-4 py-3 text-left text-gray-600">
+                  Distributor Price
+                </th>
                 <th className="px-4 py-3 text-left text-gray-600">Stock</th>
                 <th className="px-4 py-3 text-left text-gray-600">Actions</th>
               </tr>
@@ -75,14 +100,34 @@ export default function AdminProducts() {
                     {editingId === p.id ? (
                       <input
                         type="number"
-                        value={editForm.price}
+                        value={editForm.endUserPrice}
                         onChange={(e) =>
-                          setEditForm({ ...editForm, price: +e.target.value })
+                          setEditForm({
+                            ...editForm,
+                            endUserPrice: +e.target.value,
+                          })
                         }
                         className="border rounded px-2 py-1 w-20"
                       />
                     ) : (
-                      `₹${p.price}`
+                      `₹${p.prices?.[CUSTOMER_TYPE_CODES.END_USER] ?? p.price}`
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {editingId === p.id ? (
+                      <input
+                        type="number"
+                        value={editForm.distributorPrice}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            distributorPrice: +e.target.value,
+                          })
+                        }
+                        className="border rounded px-2 py-1 w-20"
+                      />
+                    ) : (
+                      `₹${p.prices?.[CUSTOMER_TYPE_CODES.DISTRIBUTOR] ?? "-"}`
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -120,7 +165,16 @@ export default function AdminProducts() {
                         <button
                           onClick={() => {
                             setEditingId(p.id);
-                            setEditForm({ price: p.price, stock: p.stock });
+                            setEditForm({
+                              endUserPrice:
+                                p.prices?.[CUSTOMER_TYPE_CODES.END_USER] ??
+                                p.price ??
+                                0,
+                              distributorPrice:
+                                p.prices?.[CUSTOMER_TYPE_CODES.DISTRIBUTOR] ??
+                                0,
+                              stock: p.stock,
+                            });
                           }}
                           className="text-blue-600"
                         >
