@@ -5,7 +5,22 @@ import { prisma } from "../config/db";
 import { config } from "../config";
 import { AuthRequest } from "../middleware/auth";
 import { hashPassword, comparePassword } from "../models/User";
-const bcrypt = require("bcryptjs");
+import { getDefaultCustomerType } from "../services/pricingService";
+
+const publicUser = (user: any) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
+  role: user.role,
+  customerType: user.customerType
+    ? {
+        id: user.customerType.id,
+        code: user.customerType.code,
+        name: user.customerType.name,
+      }
+    : null,
+});
 
 const generateToken = (userId: string): string => {
   return jwt.sign({ userId }, config.jwtSecret, {
@@ -28,8 +43,17 @@ export const register = async (req: Request, res: Response) => {
     }
 
     const hashedPassword = await hashPassword(password);
+    const endUserType = await getDefaultCustomerType();
     const user = await prisma.user.create({
-      data: { name, email, phone, password: hashedPassword, role: "customer" },
+      data: {
+        name,
+        email,
+        phone,
+        password: hashedPassword,
+        role: "customer",
+        customerTypeId: endUserType.id,
+      },
+      include: { customerType: true },
     });
 
     const token = generateToken(user.id);
@@ -37,12 +61,7 @@ export const register = async (req: Request, res: Response) => {
     res.status(201).json({
       success: true,
       token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: publicUser(user),
     });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -57,7 +76,10 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const { email, password } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: { customerType: true },
+    });
 
     if (!user || !(await comparePassword(password, user.password))) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -68,12 +90,7 @@ export const login = async (req: Request, res: Response) => {
     res.json({
       success: true,
       token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: publicUser(user),
     });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -90,11 +107,22 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
         email: true,
         phone: true,
         role: true,
+        customerType: {
+          select: { id: true, code: true, name: true },
+        },
         addresses: true,
         createdAt: true,
       },
     });
-    res.json({ success: true, user });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({
+      success: true,
+      user: {
+        ...publicUser(user),
+        addresses: user.addresses,
+        createdAt: user.createdAt,
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -112,9 +140,12 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
         email: true,
         phone: true,
         role: true,
+        customerType: {
+          select: { id: true, code: true, name: true },
+        },
       },
     });
-    res.json({ success: true, user });
+    res.json({ success: true, user: publicUser(user) });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
