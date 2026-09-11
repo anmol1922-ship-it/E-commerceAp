@@ -1,7 +1,10 @@
-import { useDispatch } from "react-redux";
-import { addToCart } from "../store/slices/cartSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { addToCart, replaceCart } from "../store/slices/cartSlice";
 import toast from "react-hot-toast";
 import type { Product } from "../store/slices/productSlice";
+import type { RootState } from "../store";
+import api from "../api/axios";
+import axios from "axios";
 
 interface Props {
   product: Product;
@@ -9,19 +12,35 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const dispatch = useDispatch();
+  const { user } = useSelector((state: RootState) => state.auth);
 
-  const handleAdd = () => {
-    dispatch(
-      addToCart({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        imageUrl: product.imageUrl,
-        size: product.size,
-        stock: product.stock,
-      }),
-    );
-    toast.success(`${product.name} added to cart`);
+  const handleAdd = async () => {
+    try {
+      if (user) {
+        const { data } = await api.post("/cart/add", {
+          productId: product.id,
+          quantity: 1,
+        });
+        dispatch(replaceCart(data.cart.items));
+      } else {
+        dispatch(
+          addToCart({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            imageUrl: product.imageUrl,
+            size: product.size,
+            stock: product.stock,
+          }),
+        );
+      }
+      toast.success(`${product.name} added to cart`);
+    } catch (error: unknown) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message
+        : undefined;
+      toast.error(message || "Unable to add to cart");
+    }
   };
 
   return (

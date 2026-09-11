@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../store";
-import { clearCart } from "../store/slices/cartSlice";
+import { clearCart, replaceCart } from "../store/slices/cartSlice";
 import toast from "react-hot-toast";
 import api from "../api/axios";
 
@@ -36,6 +36,15 @@ export default function Checkout() {
   const DELIVERY_CHARGE = settings?.deliveryCharge ?? 10;
   const { items } = useSelector((state: RootState) => state.cart);
   const { user } = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    if (!user) return;
+
+    api
+      .get("/cart")
+      .then(({ data }) => dispatch(replaceCart(data.cart.items)))
+      .catch(() => undefined);
+  }, [dispatch, user]);
 
   const [address, setAddress] = useState({ street: "", area: "", pincode: "" });
   const [deliverySlot, setDeliverySlot] = useState(DELIVERY_SLOTS[0]);
@@ -215,7 +224,11 @@ export default function Checkout() {
                 <button
                   key={slot}
                   onClick={() => setDeliverySlot(slot)}
-                  className={`text-sm py-2 px-3 rounded-lg border ${deliverySlot === slot ? "border-emerald-600 bg-emerald-50 text-emerald-700" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
+                  className={`text-sm py-2 px-3 rounded-lg border ${
+                    deliverySlot === slot
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                      : "border-gray-200 text-gray-600 hover:border-gray-300"
+                  }`}
                 >
                   {slot}
                 </button>
@@ -227,7 +240,11 @@ export default function Checkout() {
             <h2 className="font-semibold text-gray-900 mb-4">Payment Method</h2>
             <div className="space-y-2">
               <label
-                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${paymentMethod === "razorpay" ? "border-emerald-600 bg-emerald-50" : "border-gray-200"}`}
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${
+                  paymentMethod === "razorpay"
+                    ? "border-emerald-600 bg-emerald-50"
+                    : "border-gray-200"
+                }`}
               >
                 <input
                   type="radio"
@@ -240,7 +257,11 @@ export default function Checkout() {
                 </span>
               </label>
               <label
-                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${paymentMethod === "cod" ? "border-emerald-600 bg-emerald-50" : "border-gray-200"}`}
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${
+                  paymentMethod === "cod"
+                    ? "border-emerald-600 bg-emerald-50"
+                    : "border-gray-200"
+                }`}
               >
                 <input
                   type="radio"
